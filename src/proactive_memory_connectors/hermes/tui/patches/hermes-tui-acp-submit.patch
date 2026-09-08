@@ -1,0 +1,234 @@
+--- a/ui-tui/src/app/proactiveMemory.ts
++++ b/ui-tui/src/app/proactiveMemory.ts
+@@ -42,6 +42,17 @@
+   target_session_id: string
+ }
+ 
++export interface AcpPromptCompleted {
++  accepted: boolean
++  completed_at: string
++  final_answer: string
++  platform: string
++  requested_session_id: string
++  session_id: string
++  session_rebound: boolean
++  turn_id: string
++}
++
+ interface BridgeEvent {
+   event_type: string
+   payload: unknown
+@@ -66,6 +75,8 @@
+ 
+ const enabled = () => !/^(0|false|off|no)$/i.test(process.env.PROACTIVE_MEMORY_TUI?.trim() || '')
+ 
++export const acpSubmissionEnabled = () => /^(1|true|on|yes)$/i.test(process.env.PROACTIVE_MEMORY_ACP_SUBMIT?.trim() || '')
++
+ const sleep = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms))
+ 
+ const asText = (value: unknown) => (typeof value === 'string' ? value.trim() : '')
+@@ -176,6 +189,30 @@
+     source_session_id: asText(raw.source_session_id),
+     suggestion_id: asText(raw.suggestion_id),
+     target_session_id: asText(raw.target_session_id)
++  }
++}
++
++const asAcpPromptCompleted = (value: unknown): AcpPromptCompleted | null => {
++  if (!value || typeof value !== 'object' || Array.isArray(value)) {
++    return null
++  }
++
++  const raw = value as Record<string, unknown>
++  const required = ['completed_at', 'final_answer', 'platform', 'requested_session_id', 'session_id', 'turn_id']
++
++  if (raw.accepted !== true || typeof raw.session_rebound !== 'boolean' || required.some(key => !asText(raw[key]))) {
++    return null
++  }
++
++  return {
++    accepted: true,
++    completed_at: asText(raw.completed_at),
++    final_answer: asText(raw.final_answer),
++    platform: asText(raw.platform),
++    requested_session_id: asText(raw.requested_session_id),
++    session_id: asText(raw.session_id),
++    session_rebound: raw.session_rebound,
++    turn_id: asText(raw.turn_id)
+   }
+ }
+ 
+@@ -208,6 +245,25 @@
+   })
+ }
+ 
++export async function submitAcpPrompt(sessionId: string, userQuestion: string): Promise<AcpPromptCompleted> {
++  const raw = await requestJson(
++    '/v1/connectors/acp/prompt',
++    {
++      body: JSON.stringify({ session_id: sessionId, user_question: userQuestion }),
++      headers: { 'Content-Type': 'application/json' },
++      method: 'POST'
++    },
++    180000
++  )
++  const result = asAcpPromptCompleted(raw)
++
++  if (!result || result.requested_session_id !== sessionId) {
++    throw new Error('Proactive Memory returned an invalid ACP prompt result')
++  }
++
++  return result
++}
++
+ export async function reportResumeFailure(suggestionId: string, reason: string): Promise<void> {
+   await requestJson('/v1/events/session.resume.failed', {
+     body: JSON.stringify({
+--- a/ui-tui/src/app/submissionCore.ts
++++ b/ui-tui/src/app/submissionCore.ts
+@@ -3,6 +3,7 @@
+ import type { InputDetectDropResponse, PromptSubmitResponse } from '../gatewayTypes.js'
+ import type { Msg } from '../types.js'
+ 
++import { acpSubmissionEnabled, submitAcpPrompt } from './proactiveMemory.js'
+ import { turnController } from './turnController.js'
+ import { getUiState, patchUiState } from './uiStore.js'
+ 
+@@ -70,6 +71,28 @@
+     turnController.bufRef = ''
+     turnController.interrupted = false
+ 
++    if (acpSubmissionEnabled()) {
++      const acpSessionId = getUiState().memorySessionId ?? liveSid
++
++      void submitAcpPrompt(acpSessionId, submitText)
++        .then(result => {
++          if (result.session_id !== acpSessionId) {
++            patchUiState({ memorySessionId: result.session_id })
++          }
++          const { finalMessages } = turnController.recordMessageComplete({ text: result.final_answer })
++
++          finalMessages.forEach(message => deps.appendMessage(message))
++          patchUiState({ status: 'ready' })
++        })
++        .catch((e: Error) => {
++          turnController.recordError()
++          deps.sys(`ACP error: ${e.message}`)
++          patchUiState({ status: 'ready' })
++        })
++
++      return
++    }
++
+     deps.gw.request<PromptSubmitResponse>('prompt.submit', { session_id: liveSid, text: submitText }).catch((e: Error) => {
+       // Defensive: prompt.submit no longer rejects a mid-turn send with
+       // "session busy" (the gateway queues it and returns success), but keep
+--- a/ui-tui/src/__tests__/submissionCore.test.ts
++++ b/ui-tui/src/__tests__/submissionCore.test.ts
+@@ -46,6 +46,8 @@
+ 
+ describe('submissionCore.submitPrompt — synchronous busy (queue-race fix)', () => {
+   beforeEach(() => {
++    vi.unstubAllEnvs()
++    vi.restoreAllMocks()
+     resetUiState()
+     patchUiState({ sid: 'sess-1' })
+   })
+@@ -108,6 +110,77 @@
+ 
+     expect(calls).toContain('prompt.submit')
+   })
++
++  it('routes a visible Hermes TUI message through the exact ACP session', async () => {
++    vi.stubEnv('PROACTIVE_MEMORY_ACP_SUBMIT', '1')
++    patchUiState({ memorySessionId: 'acp-session-1' })
++    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
++      new Response(
++        JSON.stringify({
++          accepted: true,
++          completed_at: '2026-08-28T11:00:00Z',
++          final_answer: 'ACP answer in the Hermes TUI.',
++          platform: 'hermes-acp',
++          requested_session_id: 'acp-session-1',
++          session_id: 'acp-session-1',
++          session_rebound: false,
++          turn_id: 'turn-acp-1'
++        }),
++        { status: 200 }
++      )
++    )
++    const { calls, gw, resolveDrop } = makeDeferredGateway()
++    const appendMessage = vi.fn()
++
++    submitPrompt('visible question', makeDeps(gw, { appendMessage }))
++    resolveDrop({ matched: false })
++
++    await vi.waitFor(() => {
++      expect(appendMessage).toHaveBeenCalledWith({ role: 'assistant', text: 'ACP answer in the Hermes TUI.' })
++    })
++    expect(appendMessage).toHaveBeenCalledWith({ role: 'user', text: 'visible question' })
++    expect(calls).not.toContain('prompt.submit')
++    expect(getUiState().busy).toBe(false)
++    expect(fetchMock).toHaveBeenCalledTimes(1)
++    expect(String(fetchMock.mock.calls[0]?.[0])).toContain('/v1/connectors/acp/prompt')
++    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toEqual({
++      session_id: 'acp-session-1',
++      user_question: 'visible question'
++    })
++  })
++
++  it('rebinds proactive memory after Hermes creates a visible /new session', async () => {
++    vi.stubEnv('PROACTIVE_MEMORY_ACP_SUBMIT', '1')
++    patchUiState({ memorySessionId: 'visible-session-2' })
++    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
++      new Response(
++        JSON.stringify({
++          accepted: true,
++          completed_at: '2026-08-28T11:05:00Z',
++          final_answer: 'The second ACP session answered in the Hermes TUI.',
++          platform: 'hermes-acp',
++          requested_session_id: 'visible-session-2',
++          session_id: 'acp-session-2',
++          session_rebound: true,
++          turn_id: 'turn-acp-2'
++        }),
++        { status: 200 }
++      )
++    )
++    const { gw, resolveDrop } = makeDeferredGateway()
++    const appendMessage = vi.fn()
++
++    submitPrompt('question after /new', makeDeps(gw, { appendMessage }))
++    resolveDrop({ matched: false })
++
++    await vi.waitFor(() => {
++      expect(appendMessage).toHaveBeenCalledWith({
++        role: 'assistant',
++        text: 'The second ACP session answered in the Hermes TUI.'
++      })
++    })
++    expect(getUiState().memorySessionId).toBe('acp-session-2')
++  })
+ })
+ 
+ describe('submissionCore.markSubmitting', () => {
+--- a/ui-tui/src/app/useMainApp.ts
++++ b/ui-tui/src/app/useMainApp.ts
+@@ -737,6 +737,9 @@
+                 ? `Proactive Memory：已接受建议「${suggestion.title}」，等待同一 Session 继续执行。`
+                 : `Proactive Memory：已忽略建议「${suggestion.title}」。`
+           })
++          if (choice === 'approve') {
++            appendMessage({ role: 'user', text: suggestion.suggested_action })
++          }
+         })
+         .catch((error: unknown) => {
+           patchOverlayState({ suggestion })
+@@ -771,7 +774,6 @@
+         }
+ 
+         displayedResumeResultsRef.current.add(result.suggestion_id)
+-        bridgeAppendMessageRef.current({ role: 'user', text: result.suggested_action })
+         bridgeAppendMessageRef.current({ role: 'assistant', text: result.final_answer })
+         patchUiState({ status: 'ready' })
+       },

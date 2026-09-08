@@ -1,0 +1,39 @@
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.coverage
+.DS_Store
+build/
+dist/
+*.egg-info/
+
+# Local configuration, credentials, and runtime logs.
+.env
+.env.*
+!.env.example
+.pypirc
+*.pem
+*.key
+*.log
+.proactive-memory/
+
+# Keep every docs directory local, including nested documentation and assets.
+docs/
+
+# Exclude optional Skill UI metadata from version control.
+/skills/proactive-memory/agents/
+
+# Local state, media, and unrelated 3D experiments are not product source.
+/data/
+/assets/
+/lake_scene_output/
+/add_real_assets.py
+/build_photo3d.py
+/render_perspective_preview.py
+
+# Keep only installation, migration, and scripts required by the test suite.
+/scripts/*
+!/scripts/install_hermes_connector.py
+!/scripts/migrate_runtime_journal.py
+!/scripts/run_hermes_acp_demo.py
