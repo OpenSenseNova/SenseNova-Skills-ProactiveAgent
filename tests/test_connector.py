@@ -8,17 +8,17 @@ from threading import Event
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
-import proactive_memory_service.connector as connector_module
+import sn_proactive_agent.connector as connector_module
 
-from proactive_memory_service.connector import (
+from sn_proactive_agent.connector import (
     ConnectorConflictError,
     ConnectorNotFoundError,
     ConnectorRouter,
     HermesCliConnector,
     HermesTuiConnector,
 )
-from proactive_memory_service.bridge import BridgeHub
-from proactive_memory_service.contracts import (
+from sn_proactive_agent.bridge import BridgeHub
+from sn_proactive_agent.contracts import (
     EventType,
     SessionResumeRequested,
     SuggestionReady,
@@ -133,7 +133,7 @@ class ConnectorRouterTests(unittest.TestCase):
         environment = kwargs["env"]
         assert isinstance(environment, dict)
         self.assertEqual(
-            environment["PROACTIVE_MEMORY_SOURCE_SUGGESTION_ID"],
+            environment["SN_PROACTIVE_AGENT_SOURCE_SUGGESTION_ID"],
             "suggestion-1",
         )
 
@@ -152,17 +152,17 @@ class ConnectorRouterTests(unittest.TestCase):
         with patch.object(
             connector_module.shutil,
             "which",
-            return_value="/usr/local/bin/proactive-memory-service",
+            return_value="/usr/local/bin/sn-proactive-agent",
         ):
             connector.show_suggestion(suggestion)
 
         rendered = output.getvalue()
         self.assertIn(
-            "python3 -m proactive_memory_service respond suggestion-1 approve",
+            "python3 -m sn_proactive_agent respond suggestion-1 approve",
             rendered,
         )
         self.assertNotIn(
-            "proactive-memory-service proactive_memory_service respond",
+            "sn-proactive-agent sn_proactive_agent respond",
             rendered,
         )
 
@@ -170,7 +170,7 @@ class ConnectorRouterTests(unittest.TestCase):
         """A wheel/pipx package must not fall back to an unrelated python3."""
         with TemporaryDirectory() as temp_dir:
             fake_module = (
-                Path(temp_dir) / "site-packages" / "proactive_memory_service" / "connector.py"
+                Path(temp_dir) / "site-packages" / "sn_proactive_agent" / "connector.py"
             )
             fake_module.parent.mkdir(parents=True)
             fake_module.touch()
@@ -191,22 +191,22 @@ class ConnectorRouterTests(unittest.TestCase):
                 patch.object(
                     connector_module.shutil,
                     "which",
-                    return_value="/pipx/venv/bin/proactive-memory-service",
+                    return_value="/pipx/venv/bin/sn-proactive-agent",
                 ),
             ):
                 connector.show_suggestion(suggestion)
 
         rendered = output.getvalue()
         self.assertIn(
-            "proactive-memory-service respond suggestion-1 approve",
+            "sn-proactive-agent respond suggestion-1 approve",
             rendered,
         )
         self.assertIn(
-            "proactive-memory-service respond suggestion-1 ignore",
+            "sn-proactive-agent respond suggestion-1 ignore",
             rendered,
         )
         self.assertNotIn(
-            "proactive-memory-service proactive_memory_service",
+            "sn-proactive-agent sn_proactive_agent",
             rendered,
         )
         self.assertNotIn("python3 -m", rendered)
@@ -215,7 +215,7 @@ class ConnectorRouterTests(unittest.TestCase):
         """A direct ``python -m`` launch stays in the same environment."""
         with TemporaryDirectory() as temp_dir:
             fake_module = (
-                Path(temp_dir) / "site-packages" / "proactive_memory_service" / "connector.py"
+                Path(temp_dir) / "site-packages" / "sn_proactive_agent" / "connector.py"
             )
             fake_module.parent.mkdir(parents=True)
             fake_module.touch()
@@ -228,7 +228,7 @@ class ConnectorRouterTests(unittest.TestCase):
             ):
                 self.assertEqual(
                     connector._respond_prefix(),
-                    "/venv/bin/python -m proactive_memory_service",
+                    "/venv/bin/python -m sn_proactive_agent",
                 )
 
     def test_tui_connector_publishes_session_scoped_events_without_spawning(self) -> None:

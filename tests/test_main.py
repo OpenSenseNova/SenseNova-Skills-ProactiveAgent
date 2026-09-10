@@ -8,38 +8,38 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from proactive_memory_service.__main__ import _doctor, _parser
-from proactive_memory_service.lifecycle import DoctorCheck, DoctorReport
+from sn_proactive_agent.__main__ import _doctor, _parser
+from sn_proactive_agent.lifecycle import DoctorCheck, DoctorReport
 
 
 class ParserDefaultsTests(unittest.TestCase):
     def test_new_user_defaults_to_home_memory_directory(self) -> None:
         with tempfile.TemporaryDirectory() as home:
             with patch.object(Path, "home", return_value=Path(home)):
-                with patch.dict(os.environ, {"PROACTIVE_MEMORY_DATA_ROOT": ""}):
+                with patch.dict(os.environ, {"SN_PROACTIVE_AGENT_DATA_ROOT": ""}):
                     args = _parser().parse_args(["serve"])
 
-        self.assertEqual(args.data_root, Path(home) / ".proactive-memory")
+        self.assertEqual(args.data_root, Path(home) / ".sn-proactive-agent")
 
     def test_explicit_data_root_environment_overrides_default(self) -> None:
         with patch.dict(
             os.environ,
-            {"PROACTIVE_MEMORY_DATA_ROOT": "/tmp/proactive-memory-test"},
+            {"SN_PROACTIVE_AGENT_DATA_ROOT": "/tmp/sn-proactive-agent-test"},
         ):
             args = _parser().parse_args(["serve"])
 
-        self.assertEqual(args.data_root, Path("/tmp/proactive-memory-test"))
+        self.assertEqual(args.data_root, Path("/tmp/sn-proactive-agent-test"))
 
     def test_command_line_data_root_takes_precedence(self) -> None:
         with patch.dict(
             os.environ,
-            {"PROACTIVE_MEMORY_DATA_ROOT": "/tmp/proactive-memory-env"},
+            {"SN_PROACTIVE_AGENT_DATA_ROOT": "/tmp/sn-proactive-agent-env"},
         ):
             args = _parser().parse_args(
-                ["serve", "--data-root", "/tmp/proactive-memory-cli"]
+                ["serve", "--data-root", "/tmp/sn-proactive-agent-cli"]
             )
 
-        self.assertEqual(args.data_root, Path("/tmp/proactive-memory-cli"))
+        self.assertEqual(args.data_root, Path("/tmp/sn-proactive-agent-cli"))
 
     def test_web_only_disables_native_tui_suggestion_rendering(self) -> None:
         args = _parser().parse_args(["serve", "--web-only"])
@@ -72,7 +72,7 @@ class ParserDefaultsTests(unittest.TestCase):
             ), scope="hermes")
             output = io.StringIO()
             with (
-                patch("proactive_memory_service.__main__.run_doctor", return_value=report) as run,
+                patch("sn_proactive_agent.__main__.run_doctor", return_value=report) as run,
                 patch("sys.stdout", output),
             ):
                 code = _doctor(args)
@@ -89,7 +89,7 @@ class ParserDefaultsTests(unittest.TestCase):
         ), scope="hermes")
         output = io.StringIO()
         with (
-            patch("proactive_memory_service.__main__.run_doctor", return_value=report),
+            patch("sn_proactive_agent.__main__.run_doctor", return_value=report),
             patch("sys.stdout", output),
         ):
             code = _doctor(_parser().parse_args(["doctor", "--harness", "hermes"]))
@@ -101,7 +101,7 @@ class ParserDefaultsTests(unittest.TestCase):
         report = DoctorReport((DoctorCheck("python", True, "supported"),))
         output = io.StringIO()
         with (
-            patch("proactive_memory_service.__main__.run_doctor", return_value=report),
+            patch("sn_proactive_agent.__main__.run_doctor", return_value=report),
             patch("sys.stdout", output),
         ):
             code = _doctor(_parser().parse_args(["doctor", "--json"]))

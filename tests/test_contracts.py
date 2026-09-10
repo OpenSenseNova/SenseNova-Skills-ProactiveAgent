@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import unittest
 
-from proactive_memory_service.contracts import (
+from sn_proactive_agent.contracts import (
     ContractValidationError,
     EventType,
     SessionResumeFailed,

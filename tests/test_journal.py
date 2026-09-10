@@ -6,13 +6,13 @@ import unittest
 from datetime import datetime, timezone
 from pathlib import Path
 
-from proactive_memory_service.contracts import (
+from sn_proactive_agent.contracts import (
     SuggestionReady,
     TurnCompleted,
     TurnStarted,
 )
-from proactive_memory_service.journal import JournalError, RuntimeJournal
-from proactive_memory_service.storage import event_id_for_turn
+from sn_proactive_agent.journal import JournalError, RuntimeJournal
+from sn_proactive_agent.storage import event_id_for_turn
 
 
 class RuntimeJournalTests(unittest.TestCase):

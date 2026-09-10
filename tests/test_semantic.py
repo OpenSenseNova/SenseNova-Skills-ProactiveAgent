@@ -7,9 +7,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Mapping
 
-from proactive_memory_service.contracts import TurnCompleted
-from proactive_memory_service.core import OrganizerContext
-from proactive_memory_service.semantic import (
+from sn_proactive_agent.contracts import TurnCompleted
+from sn_proactive_agent.core import OrganizerContext
+from sn_proactive_agent.semantic import (
     OrganizationPlan,
     SemanticJudge,
     SemanticOrganizer,
@@ -42,7 +42,7 @@ class SemanticTests(unittest.TestCase):
         reasoner = ScriptedReasoner(
             {
                 "route": "new_project",
-                "project_name": "Proactive Memory Service",
+                "project_name": "Proactive Agent",
                 "project_summary": "把主动记忆能力封装为跨 Harness 服务。",
                 "reason": "QA 涉及持续推进的工程目标。",
             },
@@ -101,7 +101,7 @@ class SemanticTests(unittest.TestCase):
                 }
             )
         )
-        from proactive_memory_service.storage import ItemState, ProjectMetadata
+        from sn_proactive_agent.storage import ItemState, ProjectMetadata
 
         project = ProjectMetadata("project-001", "PMS", "主动记忆服务")
         item = ItemState(
@@ -165,7 +165,7 @@ class SemanticTests(unittest.TestCase):
         self.assertIn("不要静默截断", reasoner.prompts[2])
 
     def test_completed_item_is_silent_without_calling_model(self) -> None:
-        from proactive_memory_service.storage import ItemState, ProjectMetadata
+        from sn_proactive_agent.storage import ItemState, ProjectMetadata
 
         reasoner = ScriptedReasoner()
         result = SemanticJudge(reasoner).judge(
@@ -187,7 +187,7 @@ class SemanticTests(unittest.TestCase):
         self.assertEqual(reasoner.prompts, [])
 
     def test_recent_item_hint_resolves_anaphoric_follow_up(self) -> None:
-        from proactive_memory_service.storage import ItemState, MarkdownStore, ProjectMetadata
+        from sn_proactive_agent.storage import ItemState, MarkdownStore, ProjectMetadata
 
         reasoner = ScriptedReasoner(
             {"route": "untracked", "reason": "单轮文本没有项目名。"},

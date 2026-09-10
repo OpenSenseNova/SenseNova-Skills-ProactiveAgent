@@ -4,7 +4,7 @@ import unittest
 from threading import Thread
 from time import sleep
 
-from proactive_memory_service.bridge import BridgeHub
+from sn_proactive_agent.bridge import BridgeHub
 
 
 class BridgeHubTests(unittest.TestCase):

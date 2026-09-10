@@ -14,7 +14,7 @@ from wsgiref.util import setup_testing_defaults
 
 
 ROOT = Path(__file__).resolve().parents[1]
-CONNECTORS_ROOT = ROOT / "src" / "proactive_memory_connectors"
+CONNECTORS_ROOT = ROOT / "src" / "sn_proactive_agent_connectors"
 if str(CONNECTORS_ROOT) not in sys.path:
     sys.path.insert(0, str(CONNECTORS_ROOT))
 
@@ -25,22 +25,22 @@ from acp import (  # noqa: E402
     StdioJsonRpcTransport,
     V1HttpEventSink,
 )
-from proactive_memory_service.api import create_app  # noqa: E402
-from proactive_memory_service.connector import ConnectorRouter  # noqa: E402
-from proactive_memory_service.contracts import (  # noqa: E402
+from sn_proactive_agent.api import create_app  # noqa: E402
+from sn_proactive_agent.connector import ConnectorRouter  # noqa: E402
+from sn_proactive_agent.contracts import (  # noqa: E402
     SessionResumeRequested,
     SuggestionChoice,
     SuggestionReady,
     SuggestionResponded,
     TurnCompleted,
 )
-from proactive_memory_service.core import (  # noqa: E402
+from sn_proactive_agent.core import (  # noqa: E402
     OrganizerContext,
-    ProactiveMemoryCore,
+    ProactiveAgentCore,
 )
-from proactive_memory_service.journal import RuntimeJournal  # noqa: E402
-from proactive_memory_service.semantic import JudgeResult, OrganizationPlan  # noqa: E402
-from proactive_memory_service.storage import (  # noqa: E402
+from sn_proactive_agent.journal import RuntimeJournal  # noqa: E402
+from sn_proactive_agent.semantic import JudgeResult, OrganizationPlan  # noqa: E402
+from sn_proactive_agent.storage import (  # noqa: E402
     ItemState,
     ItemUpdate,
     MarkdownStore,
@@ -208,12 +208,12 @@ class AcpCoreIntegrationTests(unittest.TestCase):
 
     def _client(
         self,
-        core: ProactiveMemoryCore,
+        core: ProactiveAgentCore,
         transport: StdioJsonRpcTransport,
     ) -> tuple[AcpClient, WsgiOpener]:
         opener = WsgiOpener(create_app(core))
         sink = V1HttpEventSink(
-            "http://proactive-memory.test",
+            "http://sn-proactive-agent.test",
             fail_open=False,
             opener=opener,
         )
@@ -229,7 +229,7 @@ class AcpCoreIntegrationTests(unittest.TestCase):
 
     def test_fake_acp_qa_updates_markdown_and_runtime_once(self) -> None:
         judge = CountingJudge(JudgeResult(False, "状态已更新，当前无需额外提醒。"))
-        core = ProactiveMemoryCore(
+        core = ProactiveAgentCore(
             self.store,
             self.journal,
             self.organizer,
@@ -310,7 +310,7 @@ class AcpCoreIntegrationTests(unittest.TestCase):
                 "继续完成 ACP 接入。",
             )
         )
-        core = ProactiveMemoryCore(
+        core = ProactiveAgentCore(
             self.store,
             self.journal,
             self.organizer,
@@ -377,7 +377,7 @@ class AcpCoreIntegrationTests(unittest.TestCase):
                 suggestion_sink=ui_suggestions.append,
                 asynchronous_resume=False,
             )
-            core = ProactiveMemoryCore(
+            core = ProactiveAgentCore(
                 self.store,
                 self.journal,
                 self.organizer,
@@ -388,7 +388,7 @@ class AcpCoreIntegrationTests(unittest.TestCase):
             )
             opener = WsgiOpener(create_app(core))
             sink = V1HttpEventSink(
-                "http://proactive-memory.test",
+                "http://sn-proactive-agent.test",
                 fail_open=False,
                 opener=opener,
             )
@@ -470,7 +470,7 @@ class AcpCoreIntegrationTests(unittest.TestCase):
                 suggestion_sink=lambda _event: None,
                 asynchronous_resume=False,
             )
-            core = ProactiveMemoryCore(
+            core = ProactiveAgentCore(
                 self.store,
                 self.journal,
                 self.organizer,
@@ -481,7 +481,7 @@ class AcpCoreIntegrationTests(unittest.TestCase):
             )
             opener = WsgiOpener(create_app(core))
             sink = V1HttpEventSink(
-                "http://proactive-memory.test",
+                "http://sn-proactive-agent.test",
                 fail_open=False,
                 opener=opener,
             )

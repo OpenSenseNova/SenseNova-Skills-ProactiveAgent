@@ -11,14 +11,14 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 SERVICE_ROOT = ROOT / "src"
-CONNECTORS_ROOT = ROOT / "src" / "proactive_memory_connectors"
+CONNECTORS_ROOT = ROOT / "src" / "sn_proactive_agent_connectors"
 for source_root in (SERVICE_ROOT, CONNECTORS_ROOT):
     if str(source_root) not in sys.path:
         sys.path.insert(0, str(source_root))
 
 from acp import AcpTuiPromptApplication  # noqa: E402
-from proactive_memory_service.api import create_app  # noqa: E402
-from proactive_memory_service.contracts import TurnCompleted  # noqa: E402
+from sn_proactive_agent.api import create_app  # noqa: E402
+from sn_proactive_agent.contracts import TurnCompleted  # noqa: E402
 
 
 class RecordingPromptClient:

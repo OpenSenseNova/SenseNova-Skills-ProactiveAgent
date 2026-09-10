@@ -16,13 +16,14 @@ dist/
 *.pem
 *.key
 *.log
+.sn-proactive-agent/
 .proactive-memory/
 
 # Keep every docs directory local, including nested documentation and assets.
 docs/
 
 # Exclude optional Skill UI metadata from version control.
-/skills/proactive-memory/agents/
+/skills/sn-proactive-agent/agents/
 
 # Local state, media, and unrelated 3D experiments are not product source.
 /data/

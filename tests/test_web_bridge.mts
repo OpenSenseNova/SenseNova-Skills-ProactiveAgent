@@ -1,10 +1,34 @@
 import assert from 'node:assert/strict'
 import { createServer } from 'node:http'
 import { once } from 'node:events'
+import { readFileSync } from 'node:fs'
+import { runInNewContext } from 'node:vm'
 import test from 'node:test'
-import { startWebMemoryBridge, submitApprovedInput } from '../src/proactive_memory_connectors/hermes/tui/web_bridge.ts'
+import { startWebAgentBridge, submitApprovedInput } from '../src/sn_proactive_agent_connectors/hermes/tui/web_bridge.ts'
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
+
+test('dashboard retains already-seen daily reports after the rename', () => {
+  const source = readFileSync(new URL('../src/sn_proactive_agent/web/app.js', import.meta.url), 'utf8')
+  const binding = source.indexOf('  document.getElementById("daily-report-open")?.addEventListener')
+  assert.ok(binding > 0)
+  const records = new Map<string, string>()
+  const context: any = { window: { localStorage: {
+    getItem: (key: string) => records.get(key) ?? null,
+    setItem: (key: string, value: string) => records.set(key, value),
+  } } }
+  // Exercise the actual helpers without starting the dashboard's DOM polling.
+  runInNewContext(source.slice(0, binding)
+    + 'globalThis.reportTest = { hasSeenDailyReport, rememberDailyReportSeen }; })();', context)
+  const report = { report_id: 'same-report' }
+  assert.equal(context.reportTest.hasSeenDailyReport(report), false)
+  records.set('proactive-memory:daily-report-seen:same-report', '1')
+  assert.equal(context.reportTest.hasSeenDailyReport(report), true)
+  context.reportTest.rememberDailyReportSeen(report)
+  assert.equal(records.get('sn-proactive-agent:daily-report-seen:same-report'), '1')
+  assert.equal(records.get('proactive-memory:daily-report-seen:same-report'), '1')
+})
+
 async function until(predicate: () => boolean) {
   for (let count = 0; count < 200; count++) {
     if (predicate()) return
@@ -12,7 +36,7 @@ async function until(predicate: () => boolean) {
   }
   assert.fail('Bridge did not reach expected state')
 }
-async function fixture(t: any, options: { action?: string; busy?: boolean; changeDuringClaim?: boolean; rejectSubmission?: boolean } = {}) {
+async function fixture(t: any, options: { action?: string; busy?: boolean; changeDuringClaim?: boolean; rejectSubmission?: boolean; envUrl?: 'legacy' | 'canonical' } = {}) {
   const state = { busy: options.busy ?? false, submissions: [] as string[], failures: [] as object[],
     claims: 0, polls: 0, claimed: false, events: [] as object[] }
   const server = createServer(async (req, res) => {
@@ -34,8 +58,23 @@ async function fixture(t: any, options: { action?: string; busy?: boolean; chang
   server.listen(0, '127.0.0.1')
   await once(server, 'listening')
   const address = server.address() as { port: number }
-  const stop = startWebMemoryBridge({ sessionId: 'same-session', instanceId: 'fixture',
-    serviceUrl: `http://127.0.0.1:${address.port}`, intervalMs: 10,
+  const serviceUrl = `http://127.0.0.1:${address.port}`
+  if (options.envUrl) {
+    const names = ['SN_PROACTIVE_AGENT_SERVICE_URL', 'PROACTIVE_MEMORY_SERVICE_URL']
+    const previous = names.map(name => process.env[name])
+    delete process.env.SN_PROACTIVE_AGENT_SERVICE_URL
+    process.env.PROACTIVE_MEMORY_SERVICE_URL = serviceUrl
+    if (options.envUrl === 'canonical') {
+      process.env.SN_PROACTIVE_AGENT_SERVICE_URL = serviceUrl
+      process.env.PROACTIVE_MEMORY_SERVICE_URL = 'http://127.0.0.1:1'
+    }
+    t.after(() => names.forEach((name, index) => {
+      if (previous[index] === undefined) delete process.env[name]
+      else process.env[name] = previous[index]
+    }))
+  }
+  const stop = startWebAgentBridge({ sessionId: 'same-session', instanceId: 'fixture',
+    serviceUrl: options.envUrl ? undefined : serviceUrl, intervalMs: 10,
     canSubmit: () => !state.busy, submit: async text => {
       if (options.rejectSubmission) throw new Error('Gateway rejected input')
       state.submissions.push(text)
@@ -45,6 +84,18 @@ async function fixture(t: any, options: { action?: string; busy?: boolean; chang
     payload: { platform: 'hermes-tui', target_session_id: 'same-session', suggestion_id: 'approved-id', suggested_action: 'Untrusted presentation copy' } }
   return { state, approved }
 }
+
+test('legacy service URL remains usable by the renamed bridge', async t => {
+  const { state, approved } = await fixture(t, { envUrl: 'legacy' })
+  state.events = [approved]
+  await until(() => state.submissions.length === 1)
+})
+
+test('canonical service URL takes precedence over the legacy variable', async t => {
+  const { state, approved } = await fixture(t, { envUrl: 'canonical' })
+  state.events = [approved]
+  await until(() => state.submissions.length === 1)
+})
 
 test('ready suggestions do not execute; approval uses authoritative action exactly once', async t => {
   const { state, approved } = await fixture(t)

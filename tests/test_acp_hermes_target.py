@@ -6,7 +6,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-CONNECTORS_ROOT = ROOT / "src" / "proactive_memory_connectors"
+CONNECTORS_ROOT = ROOT / "src" / "sn_proactive_agent_connectors"
 if str(CONNECTORS_ROOT) not in sys.path:
     sys.path.insert(0, str(CONNECTORS_ROOT))
 
@@ -20,7 +20,7 @@ class HermesAcpTargetTests(unittest.TestCase):
         self.assertEqual(target.command, ("/opt/hermes", "acp"))
         environment = target.environment({"PATH": "/bin"})
         self.assertEqual(environment["PATH"], "/bin")
-        self.assertEqual(environment["PROACTIVE_MEMORY_INTERNAL_REASONER"], "1")
+        self.assertEqual(environment["SN_PROACTIVE_AGENT_INTERNAL_REASONER"], "1")
         self.assertEqual(environment["HERMES_IGNORE_RULES"], "1")
         self.assertEqual(environment["HERMES_SAFE_MODE"], "1")
 
@@ -30,7 +30,7 @@ class HermesAcpTargetTests(unittest.TestCase):
         )
 
         self.assertNotIn("HERMES_SAFE_MODE", environment)
-        self.assertEqual(environment["PROACTIVE_MEMORY_INTERNAL_REASONER"], "1")
+        self.assertEqual(environment["SN_PROACTIVE_AGENT_INTERNAL_REASONER"], "1")
         self.assertEqual(environment["HERMES_IGNORE_RULES"], "1")
 
 

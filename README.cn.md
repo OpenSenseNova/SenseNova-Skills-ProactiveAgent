@@ -1,8 +1,8 @@
-# Proactive Memory Service
+# Proactive Agent
 
 [English](README.md) · 简体中文
 
-Proactive Memory Service 从你与 AI 的多轮对话中持续整理项目进展，并提出有用的下一步建议，由你决定接受或忽略。
+Proactive Agent 从你与 AI 的多轮对话中持续整理项目进展，并提出有用的下一步建议，由你决定接受或忽略。
 
 ## 它能帮你做什么
 
@@ -30,12 +30,14 @@ Proactive Memory Service 从你与 AI 的多轮对话中持续整理项目进展
 
 ## 如何开始
 
-让 Agent 按照 [安装 Skill](skills/proactive-memory/SKILL.md) 帮你安装服务并接入助手，也可以自行参考 [安装指南](skills/proactive-memory/references/install/overview.md)。
+改名后的 `sn-proactive-agent` 当前是本地 `0.1.3` 候选版，尚未发布；已有 `v0.1.2` Release 保持原包名。
+
+让 Agent 按照 [安装 Skill](skills/sn-proactive-agent/SKILL.md) 帮你安装服务并接入助手，也可以自行参考 [安装指南](skills/sn-proactive-agent/references/install/overview.md)。
 
 完成接入后，启动服务并保持运行：
 
 ```sh
-proactive-memory-service serve --web-only
+sn-proactive-agent serve --web-only
 ```
 
 如果接入的是 Hermes，在另一个终端打开它：

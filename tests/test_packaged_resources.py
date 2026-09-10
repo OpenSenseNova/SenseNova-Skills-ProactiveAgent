@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import unittest
 
-from proactive_memory_service.packaged_resources import (
+from sn_proactive_agent.packaged_resources import (
     connector_resource,
     materialize_hermes_resources,
     packaged_resource_inventory,

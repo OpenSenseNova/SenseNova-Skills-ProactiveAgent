@@ -5,8 +5,8 @@ import unittest
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from proactive_memory_service.connector import ConnectorRouter
-from proactive_memory_service.contracts import (
+from sn_proactive_agent.connector import ConnectorRouter
+from sn_proactive_agent.contracts import (
     SessionResumeRequested,
     SuggestionChoice,
     SuggestionReady,
@@ -14,10 +14,10 @@ from proactive_memory_service.contracts import (
     TurnCompleted,
     TurnStarted,
 )
-from proactive_memory_service.core import OrganizerContext, ProactiveMemoryCore
-from proactive_memory_service.journal import RuntimeJournal
-from proactive_memory_service.semantic import JudgeResult, OrganizationPlan
-from proactive_memory_service.storage import (
+from sn_proactive_agent.core import OrganizerContext, ProactiveAgentCore
+from sn_proactive_agent.journal import RuntimeJournal
+from sn_proactive_agent.semantic import JudgeResult, OrganizationPlan
+from sn_proactive_agent.storage import (
     ItemState,
     ItemUpdate,
     MarkdownStore,
@@ -34,7 +34,7 @@ class FixedOrganizer:
         del turn, context
         project = ProjectMetadata(
             "project-001",
-            "Proactive Memory Service",
+            "Proactive Agent",
             "完成 Hermes CLI 主动建议闭环。",
         )
         item = ItemState(
@@ -110,8 +110,8 @@ class CoreClosureTests(unittest.TestCase):
         self.journal = RuntimeJournal(data_root)
         self.connector = RecordingConnector()
 
-    def core(self, judge: FixedJudge) -> ProactiveMemoryCore:
-        return ProactiveMemoryCore(
+    def core(self, judge: FixedJudge) -> ProactiveAgentCore:
+        return ProactiveAgentCore(
             self.store,
             self.journal,
             FixedOrganizer(),

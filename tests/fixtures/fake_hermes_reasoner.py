@@ -18,7 +18,7 @@ def response_for(prompt: str) -> dict[str, object]:
         return {
             "route": "new_project",
             "project_name": "Hermes TUI 验收",
-            "project_summary": "验证 Proactive Memory 在 Hermes TUI 中的建议与同 Session 续跑。",
+            "project_summary": "验证 Proactive Agent 在 Hermes TUI 中的建议与同 Session 续跑。",
             "reason": "当前 QA 明确描述一项可追踪的 TUI 验收目标。",
         }
 
@@ -44,7 +44,7 @@ def response_for(prompt: str) -> dict[str, object]:
             "reason": "QA 建立了一个独立的验收事项。",
         }
 
-    if "你是 Proactive Memory 的 Judge" in prompt:
+    if "你是 Proactive Agent 的 Judge" in prompt:
         return {
             "outcome": "suggest",
             "reason": "下一步明确且适合由用户授权后执行。",

@@ -3,37 +3,37 @@ requires = ["setuptools>=68", "wheel>=0.42"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "proactive-memory-service"
-version = "0.1.2"
+name = "sn-proactive-agent"
+version = "0.1.3"
 description = "本地主动记忆服务：记录项目进展，适时提醒下一步。"
 readme = "README.pypi.md"
 requires-python = ">=3.11"
 dependencies = []
 
 [project.scripts]
-proactive-memory-service = "proactive_memory_service.__main__:main"
+sn-proactive-agent = "sn_proactive_agent.__main__:main"
 
 [tool.setuptools]
 packages = [
-  "proactive_memory_service",
-  "proactive_memory_connectors",
-  "proactive_memory_connectors.acp",
-  "proactive_memory_connectors.acp.targets",
-  "proactive_memory_connectors.codex",
-  "proactive_memory_connectors.hermes",
-  "proactive_memory_connectors.hermes.classic",
-  "proactive_memory_connectors.hermes.tui",
+  "sn_proactive_agent",
+  "sn_proactive_agent_connectors",
+  "sn_proactive_agent_connectors.acp",
+  "sn_proactive_agent_connectors.acp.targets",
+  "sn_proactive_agent_connectors.codex",
+  "sn_proactive_agent_connectors.hermes",
+  "sn_proactive_agent_connectors.hermes.classic",
+  "sn_proactive_agent_connectors.hermes.tui",
 ]
 
 [tool.setuptools.package-dir]
 "" = "src"
-proactive_memory_connectors = "src/proactive_memory_connectors"
-"proactive_memory_connectors.acp" = "src/proactive_memory_connectors/acp"
-"proactive_memory_connectors.acp.targets" = "src/proactive_memory_connectors/acp/targets"
-"proactive_memory_connectors.hermes" = "src/proactive_memory_connectors/hermes"
-"proactive_memory_connectors.hermes.classic" = "src/proactive_memory_connectors/hermes/classic"
-"proactive_memory_connectors.hermes.tui" = "src/proactive_memory_connectors/hermes/tui"
+sn_proactive_agent_connectors = "src/sn_proactive_agent_connectors"
+"sn_proactive_agent_connectors.acp" = "src/sn_proactive_agent_connectors/acp"
+"sn_proactive_agent_connectors.acp.targets" = "src/sn_proactive_agent_connectors/acp/targets"
+"sn_proactive_agent_connectors.hermes" = "src/sn_proactive_agent_connectors/hermes"
+"sn_proactive_agent_connectors.hermes.classic" = "src/sn_proactive_agent_connectors/hermes/classic"
+"sn_proactive_agent_connectors.hermes.tui" = "src/sn_proactive_agent_connectors/hermes/tui"
 
 [tool.setuptools.package-data]
-proactive_memory_service = ["web/*.html", "web/*.css", "web/*.js"]
-"proactive_memory_connectors.hermes.tui" = ["plugin.yaml", "patches/*.patch", "*.ts"]
+sn_proactive_agent = ["web/*.html", "web/*.css", "web/*.js"]
+"sn_proactive_agent_connectors.hermes.tui" = ["plugin.yaml", "patches/*.patch", "*.ts"]

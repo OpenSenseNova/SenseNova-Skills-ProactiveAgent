@@ -12,12 +12,12 @@ def load_plugin():
     path = (
         Path(__file__).parents[1]
         / "src"
-        / "proactive_memory_connectors"
+        / "sn_proactive_agent_connectors"
         / "hermes"
         / "tui"
         / "__init__.py"
     )
-    spec = importlib.util.spec_from_file_location("proactive_memory_hermes_plugin", path)
+    spec = importlib.util.spec_from_file_location("sn_proactive_agent_hermes_plugin", path)
     assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
@@ -53,7 +53,7 @@ class HermesPluginTests(unittest.TestCase):
                 return _Response({"source_suggestion_id": "suggestion-1"})
             return _Response({"accepted": True})
 
-        with patch.dict(os.environ, {"PROACTIVE_MEMORY_SERVICE_URL": "http://service.test"}, clear=False), patch(
+        with patch.dict(os.environ, {"SN_PROACTIVE_AGENT_SERVICE_URL": "http://service.test"}, clear=False), patch(
             "urllib.request.urlopen", side_effect=fake_urlopen
         ):
             plugin.on_pre_llm_call(

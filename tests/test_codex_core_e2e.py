@@ -15,23 +15,23 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT / "src") not in sys.path:
     sys.path.insert(0, str(ROOT / "src"))
 
-from proactive_memory_connectors.codex import (  # noqa: E402
+from sn_proactive_agent_connectors.codex import (  # noqa: E402
     CodexAppServerClient,
     CodexAppServerTransport,
     CodexConnector,
 )
-from proactive_memory_service.api import create_app  # noqa: E402
-from proactive_memory_service.connector import ConnectorRouter  # noqa: E402
-from proactive_memory_service.contracts import (  # noqa: E402
+from sn_proactive_agent.api import create_app  # noqa: E402
+from sn_proactive_agent.connector import ConnectorRouter  # noqa: E402
+from sn_proactive_agent.contracts import (  # noqa: E402
     SuggestionChoice,
     SuggestionReady,
     SuggestionResponded,
     TurnCompleted,
 )
-from proactive_memory_service.core import OrganizerContext, ProactiveMemoryCore  # noqa: E402
-from proactive_memory_service.journal import RuntimeJournal  # noqa: E402
-from proactive_memory_service.semantic import JudgeResult, OrganizationPlan  # noqa: E402
-from proactive_memory_service.storage import (  # noqa: E402
+from sn_proactive_agent.core import OrganizerContext, ProactiveAgentCore  # noqa: E402
+from sn_proactive_agent.journal import RuntimeJournal  # noqa: E402
+from sn_proactive_agent.semantic import JudgeResult, OrganizationPlan  # noqa: E402
+from sn_proactive_agent.storage import (  # noqa: E402
     ItemState,
     ItemUpdate,
     MarkdownStore,
@@ -126,7 +126,7 @@ class CodexCoreEndToEndTests(unittest.TestCase):
             journal = RuntimeJournal(data_root)
             judge = AlwaysSuggestJudge()
             suggestions: list[SuggestionReady] = []
-            core_box: dict[str, ProactiveMemoryCore] = {}
+            core_box: dict[str, ProactiveAgentCore] = {}
 
             def resume_result_sink(_request: object, outcome: object) -> None:
                 if isinstance(outcome, TurnCompleted):
@@ -142,7 +142,7 @@ class CodexCoreEndToEndTests(unittest.TestCase):
                     asynchronous_resume=False,
                     log=lambda _message: None,
                 )
-                core = ProactiveMemoryCore(
+                core = ProactiveAgentCore(
                     store,
                     journal,
                     E2EOrganizer(),

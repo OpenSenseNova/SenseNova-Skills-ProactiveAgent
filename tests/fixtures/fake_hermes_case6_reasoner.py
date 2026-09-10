@@ -105,7 +105,7 @@ def response_for(prompt: str) -> dict[str, object]:
                 "reason": "本轮执行了已授权的主动推进动作。",
             }
 
-    if "你是 Proactive Memory 的 Judge" in prompt:
+    if "你是 Proactive Agent 的 Judge" in prompt:
         if _is_materials_ready(prompt):
             return {
                 "outcome": "suggest",

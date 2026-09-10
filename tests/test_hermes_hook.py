@@ -10,12 +10,12 @@ def load_hook() -> ModuleType:
     path = (
         Path(__file__).parents[1]
         / "src"
-        / "proactive_memory_connectors"
+        / "sn_proactive_agent_connectors"
         / "hermes"
         / "classic"
         / "hermes_hook.py"
     )
-    spec = importlib.util.spec_from_file_location("proactive_memory_hermes_hook", path)
+    spec = importlib.util.spec_from_file_location("sn_proactive_agent_hermes_hook", path)
     assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)

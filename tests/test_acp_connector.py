@@ -9,7 +9,7 @@ from typing import Any
 
 
 ROOT = Path(__file__).resolve().parents[1]
-CONNECTORS_ROOT = ROOT / "src" / "proactive_memory_connectors"
+CONNECTORS_ROOT = ROOT / "src" / "sn_proactive_agent_connectors"
 if str(CONNECTORS_ROOT) not in sys.path:
     sys.path.insert(0, str(CONNECTORS_ROOT))
 
@@ -19,8 +19,8 @@ from acp import (  # noqa: E402
     StdioJsonRpcTransport,
     V1HttpEventSink,
 )
-from proactive_memory_service.contracts import TurnCompleted, TurnStarted  # noqa: E402
-from proactive_memory_service.contracts import (  # noqa: E402
+from sn_proactive_agent.contracts import TurnCompleted, TurnStarted  # noqa: E402
+from sn_proactive_agent.contracts import (  # noqa: E402
     SessionResumeFailed,
     SessionResumeRequested,
 )
@@ -128,7 +128,7 @@ class AcpConnectorTests(unittest.TestCase):
             raise OSError("service is unavailable")
 
         sink = V1HttpEventSink(
-            "http://proactive-memory.test",
+            "http://sn-proactive-agent.test",
             opener=unavailable,
             log=messages.append,
         )

@@ -14,28 +14,28 @@ from wsgiref.util import setup_testing_defaults
 
 
 ROOT = Path(__file__).resolve().parents[1]
-CONNECTORS_ROOT = ROOT / "src" / "proactive_memory_connectors"
+CONNECTORS_ROOT = ROOT / "src" / "sn_proactive_agent_connectors"
 if str(CONNECTORS_ROOT) not in sys.path:
     sys.path.insert(0, str(CONNECTORS_ROOT))
 
 from acp import AcpClient, AcpConnector, StdioJsonRpcTransport  # noqa: E402
-from proactive_memory_service.api import create_app  # noqa: E402
-from proactive_memory_service.bridge import BridgeHub  # noqa: E402
-from proactive_memory_service.connector import (  # noqa: E402
+from sn_proactive_agent.api import create_app  # noqa: E402
+from sn_proactive_agent.bridge import BridgeHub  # noqa: E402
+from sn_proactive_agent.connector import (  # noqa: E402
     ConnectorRouter,
     HermesTuiSuggestionBridge,
 )
-from proactive_memory_service.contracts import (  # noqa: E402
+from sn_proactive_agent.contracts import (  # noqa: E402
     SessionResumeRequested,
     SuggestionReady,
 )
-from proactive_memory_service.core import (  # noqa: E402
+from sn_proactive_agent.core import (  # noqa: E402
     OrganizerContext,
-    ProactiveMemoryCore,
+    ProactiveAgentCore,
 )
-from proactive_memory_service.journal import RuntimeJournal  # noqa: E402
-from proactive_memory_service.semantic import OrganizationPlan  # noqa: E402
-from proactive_memory_service.storage import (  # noqa: E402
+from sn_proactive_agent.journal import RuntimeJournal  # noqa: E402
+from sn_proactive_agent.semantic import OrganizationPlan  # noqa: E402
+from sn_proactive_agent.storage import (  # noqa: E402
     ItemState,
     ItemUpdate,
     MarkdownStore,
@@ -163,7 +163,7 @@ class AcpTuiBridgeIntegrationTests(unittest.TestCase):
                 suggestion_sink=tui_sink,
                 resume_result_sink=tui_sink.publish_resume_result,
             )
-            core = ProactiveMemoryCore(
+            core = ProactiveAgentCore(
                 self.store,
                 self.journal,
                 SourceTurnOrganizer(),
@@ -279,7 +279,7 @@ class AcpTuiBridgeIntegrationTests(unittest.TestCase):
                 log=lambda _message: None,
             ),
         )
-        core = ProactiveMemoryCore(
+        core = ProactiveAgentCore(
             self.store,
             self.journal,
             SourceTurnOrganizer(),
@@ -333,7 +333,7 @@ class AcpTuiBridgeIntegrationTests(unittest.TestCase):
             cwd=ROOT,
             suggestion_sink=lambda _event: None,
         )
-        core = ProactiveMemoryCore(
+        core = ProactiveAgentCore(
             self.store,
             self.journal,
             SourceTurnOrganizer(),

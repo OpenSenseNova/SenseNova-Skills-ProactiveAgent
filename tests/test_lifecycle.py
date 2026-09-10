@@ -10,7 +10,7 @@ from pathlib import Path
 from unittest.mock import Mock
 from unittest.mock import patch
 
-from proactive_memory_service.lifecycle import (
+from sn_proactive_agent.lifecycle import (
     DoctorCheck,
     DoctorReport,
     LifecycleError,
@@ -18,7 +18,7 @@ from proactive_memory_service.lifecycle import (
     setup_harness,
     uninstall_harness,
 )
-from proactive_memory_service.packaged_resources import connector_resource
+from sn_proactive_agent.packaged_resources import connector_resource
 
 
 class LifecycleTests(unittest.TestCase):
@@ -37,7 +37,7 @@ class LifecycleTests(unittest.TestCase):
             self.assertTrue(result.config_changed)
             self.assertTrue(result.hook_path.is_file())
             skill_path = (
-                home / "skills" / "productivity" / "proactive-memory" / "SKILL.md"
+                home / "skills" / "productivity" / "sn-proactive-agent" / "SKILL.md"
             )
             self.assertFalse(skill_path.exists())
             config = result.config_path.read_text(encoding="utf-8")
@@ -78,7 +78,7 @@ class LifecycleTests(unittest.TestCase):
                 hermes_home=home,
                 hermes_executable="/usr/bin/true",
             )
-            plugin = home / "plugins" / "proactive-memory-tui"
+            plugin = home / "plugins" / "sn-proactive-agent-tui"
             self.assertTrue((plugin / "__init__.py").is_file())
             self.assertTrue((plugin / "plugin.yaml").is_file())
             self.assertTrue(
@@ -103,7 +103,7 @@ class LifecycleTests(unittest.TestCase):
                 home
                 / "skills"
                 / "productivity"
-                / "proactive-memory"
+                / "sn-proactive-agent"
                 / "connectors"
                 / "hermes"
                 / "classic"
@@ -112,7 +112,7 @@ class LifecycleTests(unittest.TestCase):
             self.assertFalse(hook.exists())
             self.assertTrue(marker.is_file())
             self.assertNotIn(
-                "proactive-memory",
+                "sn-proactive-agent",
                 home.joinpath("config.yaml").read_text(encoding="utf-8"),
             )
 
@@ -150,7 +150,7 @@ class LifecycleTests(unittest.TestCase):
 
 class DoctorIntegrationTests(unittest.TestCase):
     def _install_observer_fixture(self, home: Path) -> Path:
-        plugin = home / "plugins" / "proactive-memory-tui"
+        plugin = home / "plugins" / "sn-proactive-agent-tui"
         plugin.mkdir(parents=True)
         for filename in ("__init__.py", "plugin.yaml"):
             source = connector_resource(f"hermes/tui/{filename}")
@@ -328,7 +328,7 @@ class DoctorIntegrationTests(unittest.TestCase):
     def test_base_runtime_check_does_not_inspect_hermes_home(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             with patch(
-                "proactive_memory_service.lifecycle._hermes_integration_checks",
+                "sn_proactive_agent.lifecycle._hermes_integration_checks",
                 side_effect=AssertionError("runtime scope must not inspect Hermes"),
             ):
                 report = run_doctor(data_root=directory)
@@ -343,7 +343,7 @@ class DoctorIntegrationTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as directory:
             with patch(
-                "proactive_memory_service.lifecycle.connector_resource", side_effect=resource,
+                "sn_proactive_agent.lifecycle.connector_resource", side_effect=resource,
             ):
                 report = run_doctor(data_root=directory)
                 hermes_report = self._report(Path(directory) / "hermes")

@@ -8,11 +8,11 @@ from pathlib import Path
 from typing import Any
 from wsgiref.util import setup_testing_defaults
 
-from proactive_memory_service.api import create_app
-from proactive_memory_service.bridge import BridgeHub
-from proactive_memory_service.core import OrganizerContext, TurnStorageHandler
-from proactive_memory_service.contracts import EventType, InboundEvent
-from proactive_memory_service.storage import (
+from sn_proactive_agent.api import create_app
+from sn_proactive_agent.bridge import BridgeHub
+from sn_proactive_agent.core import OrganizerContext, TurnStorageHandler
+from sn_proactive_agent.contracts import EventType, InboundEvent
+from sn_proactive_agent.storage import (
     ItemState,
     ItemUpdate,
     MarkdownStore,
@@ -153,7 +153,7 @@ class EventApiTests(unittest.TestCase):
             store.create_project(
                 ProjectMetadata(
                     id="project-001",
-                    name="Proactive Memory Service",
+                    name="Proactive Agent",
                     summary="将主动记忆 Demo 封装为可安装能力。",
                 )
             )

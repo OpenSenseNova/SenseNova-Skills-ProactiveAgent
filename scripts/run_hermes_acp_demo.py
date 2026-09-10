@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run one reproducible Proactive Memory demo through real Hermes ACP + TUI."""
+"""Run one reproducible Proactive Agent demo through real Hermes ACP + TUI."""
 
 from __future__ import annotations
 
@@ -19,7 +19,7 @@ from wsgiref.simple_server import WSGIRequestHandler, WSGIServer, make_server
 
 ROOT = Path(__file__).resolve().parents[1]
 SERVICE_ROOT = ROOT / "src"
-CONNECTORS_ROOT = ROOT / "src" / "proactive_memory_connectors"
+CONNECTORS_ROOT = ROOT / "src" / "sn_proactive_agent_connectors"
 for source_root in (SERVICE_ROOT, CONNECTORS_ROOT):
     if str(source_root) not in sys.path:
         sys.path.insert(0, str(source_root))
@@ -31,23 +31,23 @@ from acp import (  # noqa: E402
     HermesAcpTarget,
     V1HttpEventSink,
 )
-from proactive_memory_service.api import create_app  # noqa: E402
-from proactive_memory_service.bridge import BridgeHub  # noqa: E402
-from proactive_memory_service.connector import (  # noqa: E402
+from sn_proactive_agent.api import create_app  # noqa: E402
+from sn_proactive_agent.bridge import BridgeHub  # noqa: E402
+from sn_proactive_agent.connector import (  # noqa: E402
     ConnectorRouter,
     HermesTuiSuggestionBridge,
 )
-from proactive_memory_service.contracts import TurnCompleted  # noqa: E402
-from proactive_memory_service.core import (  # noqa: E402
+from sn_proactive_agent.contracts import TurnCompleted  # noqa: E402
+from sn_proactive_agent.core import (  # noqa: E402
     OrganizerContext,
-    ProactiveMemoryCore,
+    ProactiveAgentCore,
 )
-from proactive_memory_service.journal import RuntimeJournal  # noqa: E402
-from proactive_memory_service.semantic import (  # noqa: E402
+from sn_proactive_agent.journal import RuntimeJournal  # noqa: E402
+from sn_proactive_agent.semantic import (  # noqa: E402
     JudgeResult,
     OrganizationPlan,
 )
-from proactive_memory_service.storage import (  # noqa: E402
+from sn_proactive_agent.storage import (  # noqa: E402
     ItemState,
     ItemUpdate,
     MarkdownStore,
@@ -436,6 +436,10 @@ def write_json(path: Path, payload: dict[str, Any]) -> None:
 
 def tui_command(service_url: str, hermes: Path, session_id: str) -> str:
     environment = [
+        f"SN_PROACTIVE_AGENT_SERVICE_URL={shlex.quote(service_url)}",
+        "SN_PROACTIVE_AGENT_TUI=1",
+        "SN_PROACTIVE_AGENT_ACP_SUBMIT=1",
+        # The optional historical native-TUI patch still consumes these names.
         f"PROACTIVE_MEMORY_SERVICE_URL={shlex.quote(service_url)}",
         "PROACTIVE_MEMORY_TUI=1",
         "PROACTIVE_MEMORY_ACP_SUBMIT=1",
@@ -473,7 +477,7 @@ def run_demo_02(args: argparse.Namespace) -> int:
     target = HermesAcpTarget(args.hermes)
     http_server: WSGIServer | None = None
     http_thread: threading.Thread | None = None
-    core: ProactiveMemoryCore | None = None
+    core: ProactiveAgentCore | None = None
 
     try:
         with target.transport(agent_cwd) as transport:
@@ -488,7 +492,7 @@ def run_demo_02(args: argparse.Namespace) -> int:
                 resume_result_sink=tui_bridge.publish_resume_result,
                 log=core_logs.append,
             )
-            core = ProactiveMemoryCore(
+            core = ProactiveAgentCore(
                 store,
                 journal,
                 Demo02Organizer(),
@@ -781,7 +785,7 @@ def run_cross_session_demo(args: argparse.Namespace) -> int:
     target = HermesAcpTarget(args.hermes)
     http_server: WSGIServer | None = None
     http_thread: threading.Thread | None = None
-    core: ProactiveMemoryCore | None = None
+    core: ProactiveAgentCore | None = None
 
     try:
         with target.transport(agent_cwd) as transport:
@@ -803,7 +807,7 @@ def run_cross_session_demo(args: argparse.Namespace) -> int:
                 resume_result_sink=tui_bridge.publish_resume_result,
                 log=core_logs.append,
             )
-            core = ProactiveMemoryCore(
+            core = ProactiveAgentCore(
                 store,
                 journal,
                 organizer,

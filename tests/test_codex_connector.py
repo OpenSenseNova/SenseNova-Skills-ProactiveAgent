@@ -9,12 +9,12 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT / "src") not in sys.path:
     sys.path.insert(0, str(ROOT / "src"))
 
-from proactive_memory_connectors.codex import (  # noqa: E402
+from sn_proactive_agent_connectors.codex import (  # noqa: E402
     CodexAppServerClient,
     CodexAppServerTransport,
     CodexConnector,
 )
-from proactive_memory_service.contracts import (  # noqa: E402
+from sn_proactive_agent.contracts import (  # noqa: E402
     SessionResumeFailed,
     SessionResumeRequested,
     TurnCompleted,
@@ -109,4 +109,3 @@ class CodexConnectorTests(unittest.TestCase):
 
         self.assertEqual(suggestions, [])
         self.assertTrue(any(isinstance(event, TurnCompleted) for event in events))
-

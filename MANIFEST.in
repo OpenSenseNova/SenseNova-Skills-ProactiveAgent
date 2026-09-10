@@ -2,8 +2,8 @@
 # resources. Tests, selected development scripts, and README media are
 # repository-only; local docs, recordings, and state are excluded from both.
 include README.md README.cn.md README.pypi.md README.pypi.cn.md pyproject.toml
-recursive-include src/proactive_memory_service *.py *.html *.css *.js
-recursive-include src/proactive_memory_connectors *.py *.yaml *.patch *.ts
+recursive-include src/sn_proactive_agent *.py *.html *.css *.js
+recursive-include src/sn_proactive_agent_connectors *.py *.yaml *.patch *.ts
 prune build
 prune dist
 prune data
@@ -11,8 +11,8 @@ prune docs
 prune media
 prune tests
 prune scripts
-prune src/proactive_memory_service.egg-info
+prune src/sn_proactive_agent.egg-info
 global-exclude *.egg-info/*
-exclude src/proactive_memory_service.egg-info/SOURCES.txt
+exclude src/sn_proactive_agent.egg-info/SOURCES.txt
 exclude **/*.pyc
 exclude **/__pycache__/*

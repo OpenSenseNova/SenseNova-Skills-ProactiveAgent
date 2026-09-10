@@ -9,10 +9,10 @@ from pathlib import Path
 from typing import Any
 from wsgiref.util import setup_testing_defaults
 
-from proactive_memory_service.api import create_app
-from proactive_memory_service.daily_report import DailyReportService
-from proactive_memory_service.journal import RuntimeJournal
-from proactive_memory_service.storage import ItemState, MarkdownStore, ProjectMetadata
+from sn_proactive_agent.api import create_app
+from sn_proactive_agent.daily_report import DailyReportService
+from sn_proactive_agent.journal import RuntimeJournal
+from sn_proactive_agent.storage import ItemState, MarkdownStore, ProjectMetadata
 
 
 def request(

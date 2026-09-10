@@ -5,8 +5,8 @@ import unittest
 from datetime import datetime, timezone
 from pathlib import Path
 
-from proactive_memory_service.contracts import TurnCompleted
-from proactive_memory_service.storage import (
+from sn_proactive_agent.contracts import TurnCompleted
+from sn_proactive_agent.storage import (
     ItemState,
     ItemUpdate,
     MarkdownStore,
@@ -30,7 +30,7 @@ def completed_turn(*, turn_id: str = "turn-1") -> TurnCompleted:
 def project() -> ProjectMetadata:
     return ProjectMetadata(
         id="project-001",
-        name="Proactive Memory Service",
+        name="Proactive Agent",
         summary="将主动记忆 Demo 封装为可安装能力。",
         status="active",
     )

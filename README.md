@@ -1,8 +1,8 @@
-# Proactive Memory Service
+# Proactive Agent
 
 English · [简体中文](README.cn.md)
 
-Proactive Memory Service keeps project progress up to date across your AI conversations and suggests useful next steps that you can accept or ignore.
+Proactive Agent keeps project progress up to date across your AI conversations and suggests useful next steps that you can accept or ignore.
 
 ## Where it helps
 
@@ -32,12 +32,14 @@ When several projects are moving at once, the service brings their key progress 
 
 ## Getting started
 
-Use the [setup Skill](skills/proactive-memory/SKILL.md) with your agent to install the service and connect your assistant, or follow the [installation guide](skills/proactive-memory/references/install/overview.md).
+The renamed `sn-proactive-agent` package is a local `0.1.3` candidate, not yet released. The existing `v0.1.2` release keeps its original package name.
+
+Use the [setup Skill](skills/sn-proactive-agent/SKILL.md) with your agent to install the service and connect your assistant, or follow the [installation guide](skills/sn-proactive-agent/references/install/overview.md).
 
 After setup, start the service and leave it running:
 
 ```sh
-proactive-memory-service serve --web-only
+sn-proactive-agent serve --web-only
 ```
 
 For a connected Hermes installation, open it in another terminal:

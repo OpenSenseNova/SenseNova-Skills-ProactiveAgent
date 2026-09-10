@@ -5,11 +5,11 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from proactive_memory_service.api import create_app
-from proactive_memory_service.bridge import BridgeHub
-from proactive_memory_service.contracts import TurnCompleted, TurnStarted
-from proactive_memory_service.hermes_bridge_install import instance_id
-from proactive_memory_service.lifecycle import run_doctor
+from sn_proactive_agent.api import create_app
+from sn_proactive_agent.bridge import BridgeHub
+from sn_proactive_agent.contracts import TurnCompleted, TurnStarted
+from sn_proactive_agent.hermes_bridge_install import instance_id
+from sn_proactive_agent.lifecycle import run_doctor
 from test_api import request
 
 

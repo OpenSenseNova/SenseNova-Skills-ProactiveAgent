@@ -9,8 +9,8 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from proactive_memory_service import hermes_bridge_install as installer
-from proactive_memory_service.lifecycle import LifecycleError, _enable_tui_plugin, setup_harness, uninstall_harness
+from sn_proactive_agent import hermes_bridge_install as installer
+from sn_proactive_agent.lifecycle import LifecycleError, _enable_tui_plugin, setup_harness, uninstall_harness
 
 
 class BridgeInstallerTests(unittest.TestCase):
@@ -47,6 +47,24 @@ class BridgeInstallerTests(unittest.TestCase):
             pass
         self.assertEqual(self.source.read_bytes(), self.original)
         self.assertFalse((self.base / installer.STATE_DIR).exists())
+
+    def test_legacy_bridge_blocks_before_writes_until_restored(self):
+        legacy_dir = self.base / ".proactive-memory-bridge"
+        legacy_dir.mkdir()
+        record = legacy_dir / "install.json"
+        for content in ("invalid", json.dumps({"schema": 1, "status": "installed"}),
+                        json.dumps({"schema": 1, "status": "removed"})):
+            record.write_text(content)
+            with self.assertRaisesRegex(installer.BridgeInstallError, "Legacy"):
+                self.install()
+            self.assertEqual(self.source.read_bytes(), self.original)
+            self.assertEqual(record.read_text(), content)
+            self.assertFalse((self.base / installer.STATE_DIR).exists())
+        record.write_text(json.dumps({"schema": 1, "status": "removed", "original": {
+            "src/app/useMainApp.ts": {}, "src/app/proactiveMemoryWeb.ts": {}, "dist/entry.js": {},
+        }}))
+        self.install()
+        self.assertTrue(installer.inspect_install(self.root)[0])
 
     def test_install_is_idempotent_and_uninstall_restores_original_build(self):
         with patch.object(installer, "_build", side_effect=self.build_fixture) as build:
@@ -95,13 +113,13 @@ class BridgeInstallerTests(unittest.TestCase):
         config.write_text("custom: keep\n")
         with (
             patch.object(installer, "_build", side_effect=self.build_fixture),
-            patch("proactive_memory_service.lifecycle._enable_tui_plugin", return_value="enable failed"),
+            patch("sn_proactive_agent.lifecycle._enable_tui_plugin", return_value="enable failed"),
             self.assertRaises(LifecycleError),
         ):
             setup_harness("hermes", hermes_home=self.home, hermes_root=self.root,
                           install_resume_bridge=True, hermes_executable="hermes", output=io.StringIO())
         self.assertEqual(config.read_text(), "custom: keep\n")
-        self.assertFalse((self.home / "plugins/proactive-memory-tui/__init__.py").exists())
+        self.assertFalse((self.home / "plugins/sn-proactive-agent-tui/__init__.py").exists())
         self.assertEqual(self.source.read_bytes(), self.original)
         self.assertEqual(self.dist.read_bytes(), b"original built TUI\n")
 
@@ -119,7 +137,7 @@ class BridgeInstallerTests(unittest.TestCase):
         (data / "runtime.jsonl").write_bytes(b"user data\n")
         with (
             patch.object(installer, "_build", side_effect=self.build_fixture),
-            patch("proactive_memory_service.lifecycle._enable_tui_plugin", return_value=None),
+            patch("sn_proactive_agent.lifecycle._enable_tui_plugin", return_value=None),
         ):
             result = setup_harness("hermes", hermes_home=self.home, hermes_root=self.root,
                 hermes_executable="hermes", install_resume_bridge=True, output=io.StringIO())

@@ -31,17 +31,17 @@ from run_hermes_acp_demo import (  # noqa: E402
     Demo03Organizer,
     tui_command,
 )
-from proactive_memory_service.connector import ConnectorRouter  # noqa: E402
-from proactive_memory_service.contracts import (  # noqa: E402
+from sn_proactive_agent.connector import ConnectorRouter  # noqa: E402
+from sn_proactive_agent.contracts import (  # noqa: E402
     SessionResumeRequested,
     SuggestionChoice,
     SuggestionReady,
     SuggestionResponded,
     TurnCompleted,
 )
-from proactive_memory_service.core import ProactiveMemoryCore  # noqa: E402
-from proactive_memory_service.journal import RuntimeJournal  # noqa: E402
-from proactive_memory_service.storage import MarkdownStore  # noqa: E402
+from sn_proactive_agent.core import ProactiveAgentCore  # noqa: E402
+from sn_proactive_agent.journal import RuntimeJournal  # noqa: E402
+from sn_proactive_agent.storage import MarkdownStore  # noqa: E402
 
 
 class RecordingConnector:
@@ -66,7 +66,7 @@ class HermesAcpDemoScenarioTests(unittest.TestCase):
         self.store = MarkdownStore(self.data_root)
         self.journal = RuntimeJournal(self.data_root)
         self.connector = RecordingConnector()
-        self.core = ProactiveMemoryCore(
+        self.core = ProactiveAgentCore(
             self.store,
             self.journal,
             Demo02Organizer(),
@@ -167,8 +167,8 @@ class HermesAcpDemoScenarioTests(unittest.TestCase):
             "session-visible",
         )
 
-        self.assertIn("PROACTIVE_MEMORY_ACP_SUBMIT=1", command)
-        self.assertIn("PROACTIVE_MEMORY_TUI=1", command)
+        self.assertIn("SN_PROACTIVE_AGENT_ACP_SUBMIT=1", command)
+        self.assertIn("SN_PROACTIVE_AGENT_TUI=1", command)
         self.assertIn("--resume session-visible", command)
 
 
@@ -181,8 +181,8 @@ class CrossSessionDemoScenarioTests(unittest.TestCase):
         self.journal = RuntimeJournal(self.data_root)
         self.connector = RecordingConnector()
 
-    def build_core(self, organizer: object, judge: object) -> ProactiveMemoryCore:
-        return ProactiveMemoryCore(
+    def build_core(self, organizer: object, judge: object) -> ProactiveAgentCore:
+        return ProactiveAgentCore(
             self.store,
             self.journal,
             organizer,
