@@ -55,7 +55,7 @@ if ($LASTEXITCODE -ne 0) { throw "Python 3.11+ required" }
 继续 [通用流程第 2 步](overview.md#2-安装运行包)，把 `PMS_PYTHON` 显式传给 pipx。
 不要复制 Bash 的 `export` 或反斜杠续行写法。
 
-安装候选包或 Connector 前，设置已经确认的实际文件与源码路径。以下仅为写法示例，
+安装已校验的 wheel 或 Connector 前，设置已经确认的实际文件与源码路径。以下仅为写法示例，
 执行前替换；`PMS_HERMES_ROOT` 必须是当前 Hermes 实际使用的源码，不是配置目录：
 
 ```powershell
@@ -119,7 +119,7 @@ PMS_PYTHON="$(python3 -c 'import sys; print(sys.executable)')"
 
 检查失败或变量为空时停止安装；需要切换版本时使用已确认存在的解释器。
 在同一个 Linux 环境中继续 [通用流程第 2 步](overview.md#2-安装运行包)。
-安装候选包与 Connector 时，使用 WSL 内的实际路径；以下示例必须先替换，检查失败即停止：
+安装已校验的 wheel 与 Connector 时，使用 WSL 内的实际路径；以下示例必须先替换，检查失败即停止：
 
 ```bash
 PMS_PACKAGE="/path/to/proactive_memory_service-0.1.2-py3-none-any.whl"

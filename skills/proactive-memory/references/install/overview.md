@@ -10,12 +10,20 @@
 - **运行包**：通过 `pipx` 安装 Core、Web 和 Connector 资源。
 - **用户数据**：保存在用户 Home 下的 `.proactive-memory/`，不进入安装包。
 
-当前代码版本为 `0.1.2` 候选版，包含 Web-only Connector 安装和按 Session 的能力探测，
-尚未发布到包索引。TestPyPI `0.1.1` 是旧的包安装验收版本，不包含本次改进。
-现阶段只能在用户同意下，用来源已确认的候选 wheel 做安装验收；没有该文件时，
-报告“待提供候选安装包”，不编造下载链接，也不自动退回旧版。
-正式发布后，再更新为已验证的固定版本和明确索引，不把源码或本地 wheel 验收称为发布完成。
-Skill 的远程分发入口尚未在本说明中确定；没有用户提供的副本或已核实的来源时，不猜测下载地址或远程安装命令。
+本说明固定使用 `0.1.2`，对应 Git Tag `v0.1.2`，包含 Web-only Connector 安装和按 Session
+的能力探测。发布渠道为 [GitHub Release](https://github.com/OpenSenseNova/SenseNova-Skills-ProactiveAgent/releases/tag/v0.1.2)，
+作为手动发布流程的预发布版本；未发布到 PyPI。TestPyPI `0.1.1` 是旧的包安装验收版本，
+不包含本次改进，不应作为下载失败后的替代。
+
+安装前确认该 Release 已发布、不是草稿，并包含以下文件：
+
+- `proactive_memory_service-0.1.2-py3-none-any.whl`：运行包。
+- `SHA256SUMS`：发布文件的 SHA-256 校验值。
+
+仓库当前为私有，下载需要仓库读取权限；不能把浏览器登录等同于 pipx 已获授权。
+Release 不存在、无访问权限或校验失败时停止，报告具体原因，不改用 `main`、旧包或猜测地址。
+Skill 源码位于同一 Tag 下的 `skills/proactive-memory/`；按 Harness 的机制安装完整目录，
+不把运行包安装当成 Skill 已安装。预发布与安装检查通过，也不代表所有 Harness 或操作系统已完成验收。
 
 ## 1. 检查与授权
 
@@ -31,8 +39,20 @@ Windows 必须先区分原生 PowerShell 与 WSL，保证服务和 Harness 处�
 
 ## 2. 安装运行包
 
-使用系统说明中已经检查的 `PMS_PYTHON` 解释器，并把 `PMS_PACKAGE` 设置为已确认
-候选 wheel 的绝对路径。下面是 POSIX Shell 与 PowerShell 通用的单行命令；
+已有 GitHub CLI 且账号具有仓库读取权限时，先核对版本，再在本次下载的空目录中执行：
+
+```text
+gh release view v0.1.2 --repo OpenSenseNova/SenseNova-Skills-ProactiveAgent --json tagName,isDraft,isPrerelease,assets
+gh release download v0.1.2 --repo OpenSenseNova/SenseNova-Skills-ProactiveAgent --pattern proactive_memory_service-0.1.2-py3-none-any.whl --pattern SHA256SUMS
+```
+
+不要使用 `--clobber` 覆盖现有文件，也不要把访问令牌写到命令或 URL 中。没有 GitHub CLI 时，
+可以让有权限的用户从上述 Release 页面下载相同文件；不因此自动安装新的工具或修改仓库可见性。
+用当前系统的 SHA-256 工具核对 wheel 与 `SHA256SUMS` 中同名文件的记录，必须一致才继续。
+校验值应来自同一个已确认的 Release；它用于发现内容变化或下载损坏，不替代来源与权限检查。
+
+使用系统说明中已经检查的 `PMS_PYTHON` 解释器，并把 `PMS_PACKAGE` 设置为已校验
+wheel 的绝对路径。下面是 POSIX Shell 与 PowerShell 通用的单行命令；
 两个变量必须在当前终端中已设置且非空，换终端后需要重新设置：
 
 ```text
@@ -103,7 +123,7 @@ Web 可用且接入前提已满足后，执行 Connector 说明中的
 这些操作只在用户要求时执行，并先确认当前服务归属以及是否还有正在处理的对话或获批动作。
 
 - **停止**：在本次启动服务的终端按 `Ctrl+C`；若由其他进程管理器启动，使用该实例对应的停止方式。当前命令没有配置开机自启，不把终端前台运行称为常驻服务。
-- **升级**：先核对现有环境与来源，确认已验证的目标版本。已安装续跑桥时，先按 Connector 说明恢复旧桥，再更换运行包。候选 wheel 升级使用第 2 步命令，把 `PMS_PACKAGE` 换成已确认的新 wheel 并增加 `--force`；远程版本发布后则固定 `==` 版本和索引。保留已检查的 `--python`；原环境有注入包或自定义选项时先确认保留方式，不直接覆盖。
+- **升级**：先核对现有环境与来源，确认已验证的目标版本。已安装续跑桥时，先按 Connector 说明恢复旧桥，再更换运行包。下载新版本 Release 的 wheel 并核对该版本校验值，再使用第 2 步命令，把 `PMS_PACKAGE` 换成新 wheel 并增加 `--force`。固定版本链接不会自动变成新版本，不用移动旧 Tag 或覆盖旧安装包实现升级。保留已检查的 `--python`；原环境有注入包或自定义选项时先确认保留方式，不直接覆盖。
 
 ```text
 pipx list --json

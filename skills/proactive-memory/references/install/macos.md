@@ -49,10 +49,10 @@ PMS_PYTHON="$(python3 -c 'import sys; print(sys.executable)')"
 之后继续 [通用流程第 2 步](overview.md#2-安装运行包)；其中的 `--python "$PMS_PYTHON"`
 确保 pipx 使用刚刚检查的解释器，而不是另一套默认 Python。
 
-## 候选包与 Hermes 目标
+## 安装包与 Hermes 目标
 
 以下是路径与变量写法，执行前必须把示例替换为已确认的真实路径。
-`PMS_PACKAGE` 指向来源已核实的候选 wheel；`PMS_HERMES_ROOT` 指向当前 Hermes 实际使用的源码，
+`PMS_PACKAGE` 指向按通用流程下载并校验的 wheel；`PMS_HERMES_ROOT` 指向当前 Hermes 实际使用的源码，
 不是配置目录。任一检查失败时停止，不自动新建或下载替代文件：
 
 ```bash

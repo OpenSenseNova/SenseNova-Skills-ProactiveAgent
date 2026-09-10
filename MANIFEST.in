@@ -1,13 +1,14 @@
 # The source distribution contains the installable runtime and its connector
-# resources. Tests and selected development scripts are Git-only; local
-# documentation, recordings, and runtime state are excluded from both.
-include README.md README.pypi.md pyproject.toml
+# resources. Tests, selected development scripts, and README media are
+# repository-only; local docs, recordings, and state are excluded from both.
+include README.md README.cn.md README.pypi.md README.pypi.cn.md pyproject.toml
 recursive-include src/proactive_memory_service *.py *.html *.css *.js
 recursive-include src/proactive_memory_connectors *.py *.yaml *.patch *.ts
 prune build
 prune dist
 prune data
 prune docs
+prune media
 prune tests
 prune scripts
 prune src/proactive_memory_service.egg-info
