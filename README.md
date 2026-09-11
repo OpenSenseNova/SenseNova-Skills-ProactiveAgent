@@ -32,7 +32,7 @@ When several projects are moving at once, the service brings their key progress 
 
 ## Getting started
 
-The renamed `sn-proactive-agent` package is a local `0.1.3` candidate, not yet released. The existing `v0.1.2` release keeps its original package name.
+The renamed `sn-proactive-agent` package is available from the [GitHub `v0.1.3` Release](https://github.com/OpenSenseNova/SenseNova-Skills-ProactiveAgent/releases/tag/v0.1.3). It is not published to PyPI yet; install the verified wheel from that Release as described in the [setup Skill](skills/sn-proactive-agent/SKILL.md).
 
 Use the [setup Skill](skills/sn-proactive-agent/SKILL.md) with your agent to install the service and connect your assistant, or follow the [installation guide](skills/sn-proactive-agent/references/install/overview.md).
 

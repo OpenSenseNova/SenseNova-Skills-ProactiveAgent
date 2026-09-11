@@ -30,7 +30,7 @@ Proactive Agent 从你与 AI 的多轮对话中持续整理项目进展，并提
 
 ## 如何开始
 
-改名后的 `sn-proactive-agent` 当前是本地 `0.1.3` 候选版，尚未发布；已有 `v0.1.2` Release 保持原包名。
+改名后的 `sn-proactive-agent` 已发布到 [GitHub `v0.1.3` Release](https://github.com/OpenSenseNova/SenseNova-Skills-ProactiveAgent/releases/tag/v0.1.3)。目前还未发布到 PyPI；请按 [安装 Skill](skills/sn-proactive-agent/SKILL.md) 中的说明下载并安装 Release 中经过校验的 wheel。
 
 让 Agent 按照 [安装 Skill](skills/sn-proactive-agent/SKILL.md) 帮你安装服务并接入助手，也可以自行参考 [安装指南](skills/sn-proactive-agent/references/install/overview.md)。
 

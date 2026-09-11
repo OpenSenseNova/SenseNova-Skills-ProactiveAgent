@@ -17,7 +17,7 @@ Suggestions appear as short cards in the dashboard. Accept one to have the assis
 
 ## Getting started
 
-The renamed `sn-proactive-agent` package is a local `0.1.3` candidate, not yet released on GitHub or PyPI.
+The renamed `sn-proactive-agent` package is available from the [GitHub `v0.1.3` Release](https://github.com/OpenSenseNova/SenseNova-Skills-ProactiveAgent/releases/tag/v0.1.3). It is not published to PyPI yet.
 
 Use the [setup Skill](https://github.com/OpenSenseNova/SenseNova-Skills-ProactiveAgent/blob/main/skills/sn-proactive-agent/SKILL.md) with your agent to install the service and connect your assistant, or follow the [installation guide](https://github.com/OpenSenseNova/SenseNova-Skills-ProactiveAgent/blob/main/skills/sn-proactive-agent/references/install/overview.md).
 
