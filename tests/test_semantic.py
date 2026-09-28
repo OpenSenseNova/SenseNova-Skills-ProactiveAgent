@@ -13,6 +13,7 @@ from sn_proactive_agent.semantic import (
     OrganizationPlan,
     SemanticJudge,
     SemanticOrganizer,
+    _extract_json_object,
 )
 
 
@@ -38,6 +39,28 @@ def completed_turn() -> TurnCompleted:
 
 
 class SemanticTests(unittest.TestCase):
+    def test_extracts_nested_json_from_markdown_fence(self) -> None:
+        result = _extract_json_object(
+            "Here is the result:\n```json\n"
+            '{"outcome":"suggest","item":{"id":"item-001"}}\n'
+            "```\n"
+        )
+        self.assertEqual(result["item"]["id"], "item-001")
+
+    def test_extracts_json_when_string_contains_braces(self) -> None:
+        result = _extract_json_object(
+            '模型补充说明 {not-json}\n'
+            '{"reason":"保留 {原文} 并继续","updates":{"next_step":"运行测试"}}'
+        )
+        self.assertEqual(result["updates"]["next_step"], "运行测试")
+
+    def test_extracts_valid_json_after_unbalanced_prefix(self) -> None:
+        result = _extract_json_object(
+            '说明文本中出现未闭合的 {占位符\n'
+            '{"route":"existing_project","reason":"归属明确"}'
+        )
+        self.assertEqual(result["route"], "existing_project")
+
     def test_organizer_creates_first_project_and_item_from_two_stage_reasoning(self) -> None:
         reasoner = ScriptedReasoner(
             {

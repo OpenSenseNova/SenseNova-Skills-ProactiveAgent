@@ -490,14 +490,11 @@ def _language_instruction(language: str) -> str:
 def _extract_json_object(text: str) -> Mapping[str, Any]:
     stripped = text.strip()
     candidates = [stripped]
-    fenced = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", stripped, re.DOTALL)
-    if fenced:
-        candidates.append(fenced.group(1))
-    first = stripped.find("{")
-    last = stripped.rfind("}")
-    if first >= 0 and last > first:
-        candidates.append(stripped[first : last + 1])
-    for candidate in candidates:
+    # A non-greedy regex stops at the first closing brace in nested objects.
+    # Scan balanced braces instead, while ignoring braces inside JSON strings.
+    for start, end in _balanced_json_spans(stripped):
+        candidates.append(stripped[start:end])
+    for candidate in dict.fromkeys(candidates):
         try:
             parsed = json.loads(candidate)
         except json.JSONDecodeError:
@@ -506,6 +503,30 @@ def _extract_json_object(text: str) -> Mapping[str, Any]:
             return parsed
     digest = hashlib.sha256(stripped.encode("utf-8")).hexdigest()[:12]
     raise SemanticError(f"semantic worker did not return a JSON object (output {digest})")
+
+
+def _balanced_json_spans(text: str) -> list[tuple[int, int]]:
+    spans: list[tuple[int, int]] = []
+    stack: list[int] = []
+    in_string = False
+    escaped = False
+    for index, char in enumerate(text):
+        if in_string:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == '"':
+                in_string = False
+            continue
+        if char == '"':
+            in_string = True
+        elif char == "{":
+            stack.append(index)
+        elif char == "}" and stack:
+            start = stack.pop()
+            spans.append((start, index + 1))
+    return sorted(spans, key=lambda span: (span[0], -(span[1] - span[0])))
 
 
 def _recent_assignment_hint(
