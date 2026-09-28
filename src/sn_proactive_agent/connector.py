@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 import shlex
 import shutil
@@ -166,6 +167,7 @@ class HermesCliConnector:
         environment = os.environ.copy()
         set_compatible_env(environment, "SN_PROACTIVE_AGENT_SOURCE_SUGGESTION_ID", event.suggestion_id)
         environment["HERMES_ACCEPT_HOOKS"] = "1"
+        environment["SN_PROACTIVE_AGENT_SERVICE_URL"] = self.service_url
         command = [
             self.executable,
             "chat",
@@ -188,17 +190,137 @@ class HermesCliConnector:
             file=self.output,
             flush=True,
         )
+        # A Web approval arrives in the service process, so a plain Popen
+        # would attach Hermes to that process's (often hidden) terminal.  On
+        # macOS Terminal, open a dedicated window running this exact command;
+        # this makes the hand-off visible and keeps unrelated Terminal tabs
+        # out of the recorded flow.  If the desktop launcher is unavailable,
+        # retain the inherited-terminal fallback below.
+        if self._launch_visible_terminal(command, environment, event.suggestion_id):
+            return
         try:
             process = self.process_factory(command, env=environment, text=True)
         except OSError as exc:
             self._report_failure(event.suggestion_id, f"Hermes 启动失败：{exc}")
             return
+        # ``Popen`` inherits the service's terminal, which is correct for
+        # keeping the resumed command in the same shell but does not switch
+        # the desktop back to that terminal after a Web click.  When the
+        # service was launched from a desktop terminal, bring that terminal
+        # application to the foreground so the user can immediately see the
+        # authorized action and its result.  This is best-effort and never
+        # affects the resume itself.
+        self._focus_host_terminal()
         threading.Thread(
             target=self._watch_process,
             args=(process, event.suggestion_id),
             name=f"hermes-resume-{event.suggestion_id}",
             daemon=True,
         ).start()
+
+    @staticmethod
+    def _focus_host_terminal() -> None:
+        """Focus the terminal that owns the service process when detectable.
+
+        The connector remains harness- and platform-neutral: unsupported
+        desktops simply skip this cosmetic step.  Tests and headless service
+        launches are also unaffected because no terminal application is
+        selected unless a known terminal environment is present.
+        """
+        if sys.platform != "darwin":
+            return
+
+        terminal_program = os.environ.get("TERM_PROGRAM", "")
+        app_name = {
+            "Apple_Terminal": "Terminal",
+            "iTerm.app": "iTerm2",
+        }.get(terminal_program)
+        if not app_name:
+            return
+        osascript = shutil.which("osascript")
+        if not osascript:
+            return
+        script = f'tell application "{app_name}" to activate'
+        try:
+            subprocess.Popen(
+                [osascript, "-e", script],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+        except OSError:
+            # Bringing a window forward is not part of the durable contract;
+            # never turn a successful resume into a failure for this step.
+            return
+
+    def _launch_visible_terminal(
+        self,
+        command: list[str],
+        environment: dict[str, str],
+        suggestion_id: str,
+    ) -> bool:
+        """Launch one visible Hermes command in a fresh desktop terminal.
+
+        This is a presentation affordance, not part of the V1 event contract.
+        It is intentionally limited to the macOS Terminal app, where the
+        service's normal shell environment is known and AppleScript can open a
+        clean window.  Other platforms and headless runs use the regular
+        subprocess path.
+        """
+        if sys.platform != "darwin":
+            return False
+        terminal_program = os.environ.get("TERM_PROGRAM", "")
+        app_name = {"Apple_Terminal": "Terminal"}.get(terminal_program)
+        if app_name is None:
+            return False
+        osascript = shutil.which("osascript")
+        curl = shutil.which("curl")
+        if not osascript or not curl:
+            return False
+
+        exports: list[str] = []
+        for key in (
+            "SN_PROACTIVE_AGENT_SOURCE_SUGGESTION_ID",
+            "HERMES_ACCEPT_HOOKS",
+            "SN_PROACTIVE_AGENT_SERVICE_URL",
+        ):
+            value = environment.get(key)
+            if value is not None:
+                exports.append(f"export {key}={shlex.quote(value)}")
+        shell_command = "; ".join(exports + [shlex.join(command)])
+        failure_payload = json.dumps(
+            {
+                "suggestion_id": suggestion_id,
+                "reason": "Hermes 续跑进程以非零状态退出",
+                "failed_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+            },
+            ensure_ascii=False,
+        )
+        failure_report = (
+            "status=$?; "
+            "if [ \"$status\" -ne 0 ]; then "
+            f"{shlex.quote(curl)} -fsS -X POST "
+            f"{shlex.quote(self.service_url + '/v1/events/session.resume.failed')} "
+            "-H 'Content-Type: application/json' "
+            f"--data-raw {shlex.quote(failure_payload)} >/dev/null 2>&1 || true; "
+            "fi; exit \"$status\""
+        )
+        shell_command = f"{shell_command}; {failure_report}"
+        escaped_command = shell_command.replace("\\", "\\\\").replace('"', '\\"')
+        script = (
+            f'tell application "{app_name}" to activate\n'
+            f'tell application "{app_name}" to do script "{escaped_command}"\n'
+            f'tell application "{app_name}" to activate'
+        )
+        try:
+            result = subprocess.run(
+                [osascript, "-e", script],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                check=False,
+            )
+        except OSError:
+            return False
+        return result.returncode == 0
 
     def _watch_process(
         self,

@@ -137,6 +137,55 @@ class ConnectorRouterTests(unittest.TestCase):
             "suggestion-1",
         )
 
+    def test_resume_focuses_the_terminal_that_started_the_service(self) -> None:
+        with (
+            patch.object(connector_module.sys, "platform", "darwin"),
+            patch.object(connector_module.os, "environ", {"TERM_PROGRAM": "Apple_Terminal"}),
+            patch.object(
+                connector_module.shutil,
+                "which",
+                side_effect=lambda name: "/usr/bin/osascript" if name == "osascript" else "/usr/bin/curl",
+            ),
+            patch.object(connector_module.subprocess, "Popen") as popen,
+        ):
+            HermesCliConnector._focus_host_terminal()
+
+        popen.assert_called_once_with(
+            ["/usr/bin/osascript", "-e", 'tell application "Terminal" to activate'],
+            stdout=connector_module.subprocess.DEVNULL,
+            stderr=connector_module.subprocess.DEVNULL,
+        )
+
+    def test_visible_terminal_launch_uses_the_exact_resume_command(self) -> None:
+        command = ["/opt/hermes", "chat", "-q", "Write the note", "--resume", "session-1"]
+        environment = {
+            "SN_PROACTIVE_AGENT_SOURCE_SUGGESTION_ID": "suggestion-1",
+            "HERMES_ACCEPT_HOOKS": "1",
+            "SN_PROACTIVE_AGENT_SERVICE_URL": "http://127.0.0.1:8080",
+        }
+        with (
+            patch.object(connector_module.sys, "platform", "darwin"),
+            patch.object(connector_module.os, "environ", {"TERM_PROGRAM": "Apple_Terminal"}),
+            patch.object(
+                connector_module.shutil,
+                "which",
+                side_effect=lambda name: "/usr/bin/osascript" if name == "osascript" else "/usr/bin/curl",
+            ),
+            patch.object(connector_module.subprocess, "run") as run,
+        ):
+            run.return_value.returncode = 0
+            connector = HermesCliConnector("/opt/hermes", service_url="http://127.0.0.1:8080")
+            launched = connector._launch_visible_terminal(command, environment, "suggestion-1")
+
+        self.assertTrue(launched)
+        script = run.call_args.args[0]
+        self.assertEqual(script[0], "/usr/bin/osascript")
+        self.assertIn('do script "', script[2])
+        self.assertIn("suggestion-1", script[2])
+        self.assertIn("--resume session-1", script[2])
+        self.assertIn("session.resume.failed", script[2])
+        self.assertIn("curl", script[2])
+
     def test_source_checkout_respond_command_uses_python_module(self) -> None:
         output = StringIO()
         connector = HermesCliConnector("/opt/hermes", output=output)
