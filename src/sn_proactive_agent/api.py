@@ -20,6 +20,7 @@ from .contracts import (
 )
 from .daily_report import DailyReportError, DailyReportNotFoundError, DailyReportService
 from .journal import RuntimeJournal
+from .preferences import PreferenceStore, normalize_output_language
 from .storage import MarkdownStore, StorageError
 from .web import DashboardProjection
 
@@ -57,6 +58,7 @@ class EventApplication:
         self._handler = handler or NullEventHandler()
         self._bridge = bridge
         self._daily_reports = daily_reports
+        self._preferences = PreferenceStore(store.data_root) if store is not None else None
         if self._daily_reports is None and store is not None and journal is not None:
             self._daily_reports = DailyReportService(store, journal)
         self._dashboard = (
@@ -134,6 +136,9 @@ class EventApplication:
                     {"error": "dashboard_not_configured"},
                 )
             return self._respond(start_response, HTTPStatus.OK, self._dashboard.snapshot())
+
+        if path == "/api/preferences/language":
+            return self._language_preference(environ, start_response, method)
 
         if path == "/api/daily-report":
             return self._daily_report_get(start_response, method)
@@ -249,6 +254,36 @@ class EventApplication:
         except (ValueError, TypeError, KeyError, UnicodeDecodeError):
             return self._respond(start_response, HTTPStatus.BAD_REQUEST, {"error": "invalid_bridge_request"})
         return self._respond(start_response, HTTPStatus.OK, result)
+
+    def _language_preference(self, environ, start_response, method):
+        if self._preferences is None:
+            return self._respond(start_response, HTTPStatus.SERVICE_UNAVAILABLE, {"error": "preferences_not_configured"})
+        if method == "GET":
+            return self._respond(
+                start_response,
+                HTTPStatus.OK,
+                {"output_language": self._preferences.get_output_language()},
+            )
+        if method != "POST":
+            return self._respond(
+                start_response,
+                HTTPStatus.METHOD_NOT_ALLOWED,
+                {"error": "method_not_allowed"},
+                headers=[("Allow", "GET, POST")],
+            )
+        try:
+            payload = self._read_json(environ)
+            if not isinstance(payload, dict) or "language" not in payload:
+                raise ValueError("language is required")
+            language = normalize_output_language(payload["language"])
+        except (KeyError, TypeError, ValueError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+            return self._respond(
+                start_response,
+                HTTPStatus.BAD_REQUEST,
+                {"error": "invalid_language", "detail": str(exc)},
+            )
+        language = self._preferences.set_output_language(language)
+        return self._respond(start_response, HTTPStatus.OK, {"output_language": language})
 
     def _bridge_events(
         self,

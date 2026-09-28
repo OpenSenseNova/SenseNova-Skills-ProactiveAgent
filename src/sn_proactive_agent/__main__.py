@@ -30,6 +30,7 @@ from .lifecycle import (
     uninstall_harness,
 )
 from .semantic import HermesJsonReasoner, SemanticError, SemanticJudge, SemanticOrganizer
+from .preferences import PreferenceStore
 from .storage import MarkdownStore
 
 
@@ -321,6 +322,7 @@ def _serve(args: argparse.Namespace) -> None:
     data_root = args.data_root.expanduser().resolve()
     store = MarkdownStore(data_root)
     journal = RuntimeJournal(data_root)
+    preferences = PreferenceStore(data_root)
     daily_reports = DailyReportService(store, journal)
     reasoner = (
         HermesJsonReasoner(
@@ -332,8 +334,8 @@ def _serve(args: argparse.Namespace) -> None:
         if args.hermes
         else _UnavailableReasoner()
     )
-    organizer = SemanticOrganizer(reasoner)
-    judge = SemanticJudge(reasoner)
+    organizer = SemanticOrganizer(reasoner, output_language_provider=preferences.get_output_language)
+    judge = SemanticJudge(reasoner, output_language_provider=preferences.get_output_language)
     core_box: dict[str, ProactiveAgentCore] = {}
     service_url = f"http://{args.host}:{args.port}"
     connector = (

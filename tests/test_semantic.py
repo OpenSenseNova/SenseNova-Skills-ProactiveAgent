@@ -79,6 +79,7 @@ class SemanticTests(unittest.TestCase):
         self.assertEqual(result.event.updates.values["next_step"], "运行完整测试。")
         self.assertEqual(len(reasoner.prompts), 2)
         self.assertIn("project_summary 不超过 48 个字符", reasoner.prompts[0])
+        self.assertIn("输出语言要求：请使用中文回复", reasoner.prompts[0])
         self.assertIn("project_name 不超过 24 个字符", reasoner.prompts[0])
         self.assertIn("current_progress 不超过 60 个字符", reasoner.prompts[1])
         self.assertIn("next_step 不超过 32 个字符", reasoner.prompts[1])
@@ -119,6 +120,38 @@ class SemanticTests(unittest.TestCase):
         self.assertIn("等待一个或多个外部输入", silent.reasoner.prompts[0])
         self.assertIn("title 不超过 24 个字符", suggest.reasoner.prompts[0])
         self.assertIn("suggested_action 不超过 80 个字符", suggest.reasoner.prompts[0])
+
+    def test_english_output_language_is_injected_into_all_model_prompts(self) -> None:
+        reasoner = ScriptedReasoner(
+            {
+                "route": "new_project",
+                "project_name": "PMS",
+                "project_summary": "Track the service.",
+                "reason": "A continuing project.",
+            },
+            {
+                "item_route": "new_item",
+                "item": {
+                    "name": "Run validation",
+                    "status": "in_progress",
+                    "goal": "Validate the service.",
+                    "completion_criteria": "The validation passes.",
+                    "current_progress": "Implementation is ready.",
+                    "next_step": "Run tests.",
+                    "blocker": None,
+                },
+                "event_summary": "Implementation is ready.",
+                "updates": {"current_progress": "Implementation is ready.", "next_step": "Run tests."},
+                "reason": "A new item.",
+            },
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            result = SemanticOrganizer(
+                reasoner, output_language_provider=lambda: "en"
+            ).organize(completed_turn(), OrganizerContext(Path(directory) / "data", ()))
+        self.assertIsInstance(result, OrganizationPlan)
+        self.assertTrue(reasoner.prompts)
+        self.assertTrue(all("respond in English" in prompt for prompt in reasoner.prompts))
 
     def test_empty_updates_are_repaired_once_before_storage(self) -> None:
         reasoner = ScriptedReasoner(

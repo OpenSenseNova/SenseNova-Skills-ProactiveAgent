@@ -98,6 +98,20 @@ class EventApiTests(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertEqual(body, {"status": "ok"})
 
+    def test_language_preference_is_persisted_for_core(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            app = create_app(store=MarkdownStore(directory))
+            status, body = request(app, "GET", "/api/preferences/language")
+            self.assertEqual((status, body), (200, {"output_language": "zh"}))
+            status, body = request(
+                app, "POST", "/api/preferences/language", {"language": "en-US"}
+            )
+            self.assertEqual((status, body), (200, {"output_language": "en"}))
+            self.assertEqual(
+                json.loads((Path(directory) / "preferences.json").read_text()),
+                {"output_language": "en"},
+            )
+
     def test_all_four_inbound_event_interfaces_accept_valid_payloads(self) -> None:
         inbound_types = (
             EventType.TURN_STARTED,

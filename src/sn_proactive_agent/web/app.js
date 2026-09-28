@@ -19,28 +19,311 @@
     eventCache: new Map(),
     eventLoads: new Map(),
     expandedEventDetails: new Set(),
+    language: null,
+    loaded: false,
+    connectionFailed: false,
+    generatedAt: null,
+    pendingResponses: new Set(),
   };
-  const labels = {
-    active: "进行中",
-    paused: "已暂停",
-    completed: "已完成",
-    planned: "计划中",
-    in_progress: "进行中",
-    blocked: "有阻塞",
-    pending: "待你决定",
-    approved: "已接受",
-    ignored: "已忽略",
-    resuming: "正在续跑",
-    failed: "续跑失败",
+  const translations = {
+    "zh": {
+      "settings": "设置",
+      "language_auto": "跟随系统",
+      "interface_language": "界面语言",
+      "agent_language": "Agent 整理语言",
+      "agent_language_value": "中文",
+      "agent_language_note": "项目摘要、Item 状态和建议会按当前界面语言生成；已写入内容不会自动翻译。",
+      "prompt_details": "查看提示词说明",
+      "prompt_language_note": "Organizer / Judge 会收到当前界面语言要求：中文界面使用中文，英文界面使用英文；JSON 键名和枚举值保持不变。",
+      "brand_name": "Proactive Agent",
+      "local_service": "本地服务",
+      "connecting": "正在连接…",
+      "updated_at": "更新于 {value}",
+      "connection_failed": "服务连接失败",
+      "daily_report_short": "日报",
+      "view_daily_report": "查看日报",
+      "new_daily_report": "有新的日报",
+      "pending_label": "待处理",
+      "suggestions_title": "建议与决策",
+      "loading_decisions": "正在读取最新决策…",
+      "project_status": "项目状态",
+      "projects_title": "项目进展",
+      "loading_projects": "正在读取项目…",
+      "loading_project_item": "正在读取 Project / Item…",
+      "today_summary": "今日摘要",
+      "daily_report_title": "项目日报",
+      "loading": "正在读取…",
+      "close_daily_report": "关闭日报",
+      "loading_progress": "正在整理项目进展…",
+      "daily_report_footnote": "日报只保留每个项目的关键进展。",
+      "got_it": "知道了",
+      "language_label": "语言",
+      "language_zh": "中文",
+      "language_en": "English",
+      "active": "进行中",
+      "paused": "已暂停",
+      "completed": "已完成",
+      "planned": "计划中",
+      "in_progress": "进行中",
+      "blocked": "有阻塞",
+      "pending": "待你决定",
+      "approved": "已接受",
+      "ignored": "已忽略",
+      "resuming": "正在续跑",
+      "failed": "续跑失败",
+      "unknown": "未知",
+      "silent": "本轮暂不打扰",
+      "suggest": "建议已生成",
+      "discarded": "旧判断已丢弃",
+      "source_suggestion_completed": "建议已执行",
+      "untracked": "本轮未进入项目状态",
+      "today": "今日",
+      "no_daily_report": "还没有可展示的日报",
+      "no_daily_report_hint": "有新的项目进展后，日报会在这里出现。",
+      "no_progress_today": "这一天暂无项目进展",
+      "report_will_update": "有新的记录后，日报会自动补充。",
+      "next_step": "下一步",
+      "no_decisions": "还没有决策记录",
+      "no_decisions_hint": "完成一轮对话后，这里会显示 silent 或 suggestion.ready。",
+      "suggestion_generated": "建议已生成，等待你的决定。",
+      "suggestion_done": "最近建议已执行",
+      "suggestion_ignored": "最近建议已忽略",
+      "suggestion_resuming": "最近建议正在续跑",
+      "suggestion_approved": "最近建议已接受",
+      "suggestion_failed": "最近建议续跑失败",
+      "suggestion_processed": "最近建议已处理",
+      "reason_failed": "续跑失败，详细原因已写入 runtime.jsonl。",
+      "reason_ignored": "用户选择忽略，系统没有执行建议动作。",
+      "reason_completed": "用户已授权，原 ACP Session 已完成建议动作并回流结果。",
+      "reason_resuming": "用户已授权，系统正在处理原 ACP Session。",
+      "decision_recorded": "本轮决策已记录。",
+      "status_updated": "本轮状态已更新，暂不打扰。",
+      "decision_expired": "本轮判断已过期，状态更新仍已保留。",
+      "no_project": "还没有项目",
+      "no_project_hint": "收到第一轮可归属的 QA 后，Project 会出现在这里。",
+      "no_item": "暂无 Item",
+      "collapse_items": "收起 Item",
+      "view_items": "查看 {count} 个 Item",
+      "no_items": "暂无 Item",
+      "project_progress": "项目进度",
+      "item_progress": "事项进度",
+      "progress": "进度",
+      "blocked_short": "阻塞",
+      "event_count": "查看 {count} 条 Event ↓",
+      "event_count_up": "收起 {count} 条 Event ↑",
+      "no_events": "暂无历史 Event",
+      "loading_history": "正在读取历史…",
+      "events_failed": "读取 Event 失败，请稍后重试。",
+      "view_qa": "点击查看 QA",
+      "question": "问题",
+      "answer": "回答",
+      "suggestion_action": "建议操作",
+      "continue_current": "请继续推进当前事项。",
+      "ignore": "忽略",
+      "approve_continue": "接受并继续",
+      "accepted_continue": "已接受，正在继续原 ACP Session。",
+      "ignored_no_execute": "已忽略，这条建议不会执行。",
+      "submit_failed": "提交失败：{error}",
+      "cannot_connect": "无法连接 Proactive Agent 服务。",
+      "start_service_refresh": "请确认服务已启动，并刷新页面。",
+      "day_unit": "个 Project",
+      "item_unit": "个 Item",
+      "status_count": "{projects} 个 Project · {items} 个 Item",
+      "report_projects": "{date} · {count} 个 Project",
+      "unknown_source": "unknown"
+    },
+    "en": {
+      "settings": "Settings",
+      "language_auto": "System default",
+      "interface_language": "Interface language",
+      "agent_language": "Agent content language",
+      "agent_language_value": "English",
+      "agent_language_note": "Project summaries, item states, and suggestions follow the current interface language; existing content is not translated.",
+      "prompt_details": "About the prompt",
+      "prompt_language_note": "Organizer / Judge receive the current interface-language requirement: Chinese for a Chinese UI and English for an English UI; JSON keys and enum values stay unchanged.",
+      "brand_name": "Proactive Agent",
+      "local_service": "Local service",
+      "connecting": "Connecting…",
+      "updated_at": "Updated {value}",
+      "connection_failed": "Service unavailable",
+      "daily_report_short": "Daily brief",
+      "view_daily_report": "View daily brief",
+      "new_daily_report": "New daily brief",
+      "pending_label": "Pending",
+      "suggestions_title": "Suggestions & decisions",
+      "loading_decisions": "Loading latest decision…",
+      "project_status": "Project status",
+      "projects_title": "Project progress",
+      "loading_projects": "Loading projects…",
+      "loading_project_item": "Loading Project / Item…",
+      "today_summary": "Daily brief",
+      "daily_report_title": "Project brief",
+      "loading": "Loading…",
+      "close_daily_report": "Close daily brief",
+      "loading_progress": "Preparing project progress…",
+      "daily_report_footnote": "A short view of each project's key progress.",
+      "got_it": "Got it",
+      "language_label": "Language",
+      "language_zh": "中文",
+      "language_en": "English",
+      "active": "In progress",
+      "paused": "Paused",
+      "completed": "Completed",
+      "planned": "Planned",
+      "in_progress": "In progress",
+      "blocked": "Blocked",
+      "pending": "Your decision",
+      "approved": "Accepted",
+      "ignored": "Ignored",
+      "resuming": "Resuming",
+      "failed": "Resume failed",
+      "unknown": "Unknown",
+      "silent": "No interruption this round",
+      "suggest": "Suggestion ready",
+      "discarded": "Previous decision discarded",
+      "source_suggestion_completed": "Suggestion completed",
+      "untracked": "Not added to a project",
+      "today": "Today",
+      "no_daily_report": "No daily brief yet",
+      "no_daily_report_hint": "New project progress will appear here.",
+      "no_progress_today": "No project progress for this day",
+      "report_will_update": "The brief will update when new records arrive.",
+      "next_step": "Next",
+      "no_decisions": "No decisions yet",
+      "no_decisions_hint": "After a turn completes, silent or suggestion.ready will appear here.",
+      "suggestion_generated": "Suggestion ready for your decision.",
+      "suggestion_done": "Latest suggestion completed",
+      "suggestion_ignored": "Latest suggestion ignored",
+      "suggestion_resuming": "Latest suggestion is resuming",
+      "suggestion_approved": "Latest suggestion accepted",
+      "suggestion_failed": "Latest suggestion failed",
+      "suggestion_processed": "Latest suggestion processed",
+      "reason_failed": "Resume failed; details are in runtime.jsonl.",
+      "reason_ignored": "You chose to ignore it. No action was executed.",
+      "reason_completed": "You approved it; the original ACP Session completed and returned a result.",
+      "reason_resuming": "You approved it; the original ACP Session is processing the action.",
+      "decision_recorded": "This round's decision was recorded.",
+      "status_updated": "State updated without interrupting you.",
+      "decision_expired": "This decision expired; the state update was kept.",
+      "no_project": "No projects yet",
+      "no_project_hint": "Projects appear after the first attributable QA turn.",
+      "no_item": "No items",
+      "collapse_items": "Hide items",
+      "view_items": "View {count} items",
+      "no_items": "No items",
+      "project_progress": "Project progress",
+      "item_progress": "Item progress",
+      "progress": "Progress",
+      "blocked_short": "Blocked",
+      "event_count": "View {count} events ↓",
+      "event_count_up": "Hide {count} events ↑",
+      "no_events": "No event history",
+      "loading_history": "Loading history…",
+      "events_failed": "Could not load events. Try again.",
+      "view_qa": "View QA",
+      "question": "Question",
+      "answer": "Answer",
+      "suggestion_action": "Suggested action",
+      "continue_current": "Continue with the current item.",
+      "ignore": "Ignore",
+      "approve_continue": "Accept & continue",
+      "accepted_continue": "Accepted. Continuing the original ACP Session.",
+      "ignored_no_execute": "Ignored. No action was executed.",
+      "submit_failed": "Could not submit: {error}",
+      "cannot_connect": "Could not connect to Proactive Agent.",
+      "start_service_refresh": "Make sure the service is running, then refresh.",
+      "day_unit": "projects",
+      "item_unit": "items",
+      "status_count": "{projects} projects · {items} items",
+      "report_projects": "{date} · {count} projects",
+      "unknown_source": "unknown"
+    }
   };
-  const decisionLabels = {
-    silent: "本轮暂不打扰",
-    suggest: "建议已生成",
-    discarded: "旧判断已丢弃",
-    source_suggestion_completed: "建议已执行",
-    untracked: "本轮未进入项目状态",
-  };
+  const languageStorageKey = "sn-proactive-agent:language";
   const dailyReportSeenPrefix = "sn-proactive-agent:daily-report-seen:";
+
+  function detectLanguage() {
+    const languages = Array.isArray(navigator.languages) && navigator.languages.length ? navigator.languages : [navigator.language || "en"];
+    return languages.some((value) => /^zh(?:[-_]|$)/i.test(String(value))) ? "zh" : "en";
+  }
+
+  function currentLanguage() { return state.language === "zh" ? "zh" : state.language === "en" ? "en" : detectLanguage(); }
+
+  function t(key, values = {}) {
+    const dictionary = translations[currentLanguage()];
+    let value = dictionary[key] ?? translations.en[key] ?? key;
+    return String(value).replace(/\{(\w+)\}/g, (_match, name) => String(values[name] ?? ""));
+  }
+
+  function applyLanguage() {
+    const language = currentLanguage();
+    document.documentElement.lang = language === "zh" ? "zh-CN" : "en";
+    document.querySelectorAll("[data-i18n]").forEach((element) => { element.textContent = t(element.dataset.i18n); });
+    document.querySelectorAll("[data-i18n-aria-label]").forEach((element) => { element.setAttribute("aria-label", t(element.dataset.i18nAriaLabel)); });
+    const selector = document.getElementById("language-select");
+    if (selector) selector.value = state.language || "auto";
+    const interfaceValue = document.getElementById("interface-language-value");
+    if (interfaceValue) interfaceValue.textContent = state.language === "auto" ? t("language_auto") : currentLanguage() === "zh" ? t("language_zh") : t("language_en");
+    const agentValue = document.querySelector("[data-i18n='agent_language_value']");
+    if (agentValue) agentValue.textContent = t("agent_language_value");
+    document.title = `${t("brand_name")} · ${currentLanguage() === "zh" ? "工作台" : "Dashboard"}`;
+    syncOutputLanguage();
+    renderConnectionState();
+  }
+
+  let lastSyncedOutputLanguage = null;
+  let outputLanguageSyncPromise = null;
+  function syncOutputLanguage() {
+    const language = currentLanguage();
+    if (language === lastSyncedOutputLanguage || outputLanguageSyncPromise) return;
+    if (typeof fetch !== "function") return;
+    let succeeded = false;
+    outputLanguageSyncPromise = fetch("/api/preferences/language", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ language }),
+    }).then((response) => {
+      if (!response.ok) throw new Error("language preference request failed");
+      succeeded = true;
+      if (currentLanguage() === language) lastSyncedOutputLanguage = language;
+    }).catch(() => {
+      // The dashboard remains usable when an older service has no preference route.
+      // Leave the language unsynced so a later refresh or language change retries.
+    }).finally(() => {
+      outputLanguageSyncPromise = null;
+      if (succeeded && currentLanguage() !== lastSyncedOutputLanguage) syncOutputLanguage();
+    });
+  }
+
+  function renderConnectionState() {
+    document.getElementById("last-updated").textContent = state.connectionFailed
+      ? t("connection_failed") : state.loaded ? t("updated_at", { value: formatTime(state.generatedAt) }) : t("connecting");
+  }
+
+  function redrawLanguage() {
+    applyLanguage();
+    if (state.connectionFailed) {
+      renderConnectionError();
+    } else if (state.loaded) {
+      const focus = captureProjectsFocus();
+      renderSuggestion();
+      renderProjects();
+      restoreProjectsFocus(focus);
+    }
+    if (state.dailyReportLoaded) renderDailyReport();
+  }
+
+  function renderConnectionError() {
+    document.getElementById("suggestion-content").innerHTML = `<div class="error-state">${escapeHtml(t("cannot_connect"))}</div>`;
+    document.getElementById("projects-content").innerHTML = `<div class="error-state">${escapeHtml(t("start_service_refresh"))}</div>`;
+  }
+
+  try {
+    const savedLanguage = window.localStorage.getItem(languageStorageKey);
+    state.language = savedLanguage === "zh" || savedLanguage === "en" ? savedLanguage : "auto";
+  } catch (_error) {
+    state.language = "auto";
+  }
 
   function escapeHtml(value) {
     return String(value == null ? "" : value)
@@ -55,7 +338,7 @@
     if (!value) return "—";
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return value;
-    return new Intl.DateTimeFormat("zh-CN", {
+    return new Intl.DateTimeFormat(currentLanguage() === "zh" ? "zh-CN" : "en-US", {
       month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit",
     }).format(date);
   }
@@ -72,7 +355,10 @@
   function reportDateLabel(value) {
     const key = typeof value === "string" ? value.slice(0, 10) : localDateKey(value);
     const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(key);
-    return match ? `${Number(match[1])} 年 ${Number(match[2])} 月 ${Number(match[3])} 日` : "今日";
+    if (!match) return t("today");
+    return currentLanguage() === "zh"
+      ? `${Number(match[1])} 年 ${Number(match[2])} 月 ${Number(match[3])} 日`
+      : `${match[1]}-${match[2]}-${match[3]}`;
   }
 
   function reportSeenKey(report, prefix = dailyReportSeenPrefix) {
@@ -122,11 +408,11 @@
   }
 
   function reportProjectName(project) {
-    return project.name || project.project_name || project.projectName || project.project_id || project.id || "未命名项目";
+    return project.name || project.project_name || project.projectName || project.project_id || project.id || (currentLanguage() === "zh" ? "未命名项目" : "Untitled project");
   }
 
   function reportProjectSummary(project) {
-    return project.summary || project.current_progress || project.progress || project.highlight || "这一天暂无新的进展记录。";
+    return project.summary || project.current_progress || project.progress || project.highlight || (currentLanguage() === "zh" ? "这一天暂无新的进展记录。" : "No new progress was recorded that day.");
   }
 
   function reportProjectNextStep(project) {
@@ -142,13 +428,13 @@
     if (!content || !subtitle) return;
     const report = state.dailyReport;
     if (!report || !report.available) {
-      subtitle.textContent = "每天 0 点后整理，打开页面即可查看。";
-      content.innerHTML = '<div class="report-empty"><span class="report-empty-icon" aria-hidden="true"></span><strong>还没有可展示的日报</strong><span>有新的项目进展后，日报会在这里出现。</span></div>';
+      subtitle.textContent = currentLanguage() === "zh" ? "每天 0 点后整理，打开页面即可查看。" : "Prepared after midnight and shown when you open the dashboard.";
+      content.innerHTML = `<div class="report-empty"><span class="report-empty-icon" aria-hidden="true"></span><strong>${escapeHtml(t("no_daily_report"))}</strong><span>${escapeHtml(t("no_daily_report_hint"))}</span></div>`;
       return;
     }
-    subtitle.textContent = `${reportDateLabel(report.date)} · ${report.projects.length} 个 Project`;
+    subtitle.textContent = t("report_projects", { date: reportDateLabel(report.date), count: report.projects.length });
     if (!report.projects.length) {
-      content.innerHTML = '<div class="report-empty"><span class="report-empty-icon" aria-hidden="true"></span><strong>这一天暂无项目进展</strong><span>有新的记录后，日报会自动补充。</span></div>';
+      content.innerHTML = `<div class="report-empty"><span class="report-empty-icon" aria-hidden="true"></span><strong>${escapeHtml(t("no_progress_today"))}</strong><span>${escapeHtml(t("report_will_update"))}</span></div>`;
       return;
     }
     content.innerHTML = report.projects.map((project) => {
@@ -162,8 +448,8 @@
         </div>
         <p class="report-project-summary">${escapeHtml(reportProjectSummary(project))}</p>
         <div class="report-project-meta">
-          ${nextStep ? `<span><b>下一步</b>${escapeHtml(nextStep)}</span>` : ""}
-          ${itemCount == null ? "" : `<span>${escapeHtml(String(itemCount))} 个 Item</span>`}
+          ${nextStep ? `<span><b>${escapeHtml(t("next_step"))}</b>${escapeHtml(nextStep)}</span>` : ""}
+          ${itemCount == null ? "" : `<span>${escapeHtml(String(itemCount))} ${escapeHtml(t("item_unit"))}</span>`}
         </div>
       </article>`;
     }).join("");
@@ -282,17 +568,20 @@
     maybeAutoOpenDailyReport();
   }
 
-  function statusLabel(status) { return labels[status] || status || "未知"; }
+  function statusLabel(status) {
+    const known = ["active", "paused", "completed", "planned", "in_progress", "blocked", "pending", "approved", "ignored", "resuming", "failed"];
+    return known.includes(status) ? t(status) : status || t("unknown");
+  }
 
   function decisionDisplayReason(decision) {
     const messages = {
-      silent: "本轮状态已更新，暂不打扰。",
-      suggest: "建议已生成，等待你的决定。",
-      discarded: "本轮判断已过期，状态更新仍已保留。",
-      source_suggestion_completed: "建议动作已执行，结果已回流。",
-      untracked: "本轮没有进入项目状态。",
+      silent: t("status_updated"),
+      suggest: t("suggestion_generated"),
+      discarded: t("decision_expired"),
+      source_suggestion_completed: t("suggestion_done"),
+      untracked: t("untracked"),
     };
-    return messages[decision?.outcome] || "本轮决策已记录。";
+    return messages[decision?.outcome] || t("decision_recorded");
   }
 
   function progressWidth(project) {
@@ -304,11 +593,12 @@
   function renderSuggestion() {
     const root = document.getElementById("suggestion-content");
     const count = state.suggestions.filter((item) => item.status === "pending").length;
-    document.getElementById("suggestion-count").textContent = `${count} 条待处理`;
+    document.getElementById("suggestion-count").textContent = currentLanguage() === "zh" ? `${count} 条待处理` : `${count} pending`;
     const pending = state.suggestions.filter((item) => item.status === "pending");
     if (pending.length) {
       root.innerHTML = pending.map(renderSuggestionCard).join("");
       root.querySelectorAll("[data-choice]").forEach((button) => {
+        button.disabled = state.pendingResponses.has(button.dataset.id);
         button.addEventListener("click", () => respond(button.dataset.id, button.dataset.choice, button));
       });
       return;
@@ -316,19 +606,15 @@
     const latestSuggestion = state.suggestions[0];
     if (latestSuggestion && latestSuggestion.status !== "pending") {
       const statusTitle = {
-        completed: "最近建议已执行",
-        ignored: "最近建议已忽略",
-        resuming: "最近建议正在续跑",
-        approved: "最近建议已接受",
-        failed: "最近建议续跑失败",
-      }[latestSuggestion.status] || "最近建议已处理";
+        completed: t("suggestion_done"), ignored: t("suggestion_ignored"), resuming: t("suggestion_resuming"), approved: t("suggestion_approved"), failed: t("suggestion_failed"),
+      }[latestSuggestion.status] || t("suggestion_processed");
       const statusReason = latestSuggestion.status === "failed"
-        ? "续跑失败，详细原因已写入 runtime.jsonl。"
+        ? t("reason_failed")
         : latestSuggestion.status === "ignored"
-          ? "用户选择忽略，系统没有执行建议动作。"
+          ? t("reason_ignored")
           : latestSuggestion.status === "completed"
-            ? "用户已授权，原 ACP Session 已完成建议动作并回流结果。"
-            : "用户已授权，系统正在处理原 ACP Session。";
+            ? t("reason_completed")
+            : t("reason_resuming");
       root.innerHTML = `<div class="decision-card">
         <div class="decision-icon">✓</div>
         <div><h3>${escapeHtml(statusTitle)}</h3>
@@ -339,10 +625,10 @@
     }
     const latest = state.latestDecision;
     if (!latest) {
-      root.innerHTML = '<div class="empty-state"><div><strong>还没有决策记录</strong><br /><span>完成一轮对话后，这里会显示 silent 或 suggestion.ready。</span></div></div>';
+      root.innerHTML = `<div class="empty-state"><div><strong>${escapeHtml(t("no_decisions"))}</strong><br /><span>${escapeHtml(t("no_decisions_hint"))}</span></div></div>`;
       return;
     }
-    const outcome = decisionLabels[latest.outcome] || `本轮决策：${latest.outcome || "已记录"}`;
+    const outcome = ({ silent: t("silent"), suggest: t("suggest"), discarded: t("discarded"), source_suggestion_completed: t("source_suggestion_completed"), untracked: t("untracked") }[latest.outcome]) || `${currentLanguage() === "zh" ? "本轮决策：" : "Decision: "}${latest.outcome || t("decision_recorded")}`;
     root.innerHTML = `<div class="decision-card">
       <div class="decision-icon">✓</div>
       <div><h3>${escapeHtml(outcome)}</h3>
@@ -356,12 +642,12 @@
       <div class="suggestion-meta"><span class="status-badge status-pending">${statusLabel(item.status)}</span><span>${escapeHtml(item.platform || "ACP")}</span><span>·</span><span>${escapeHtml(formatTime(item.created_at))}</span></div>
       <h3>${escapeHtml(item.title)}</h3>
       <div class="suggestion-action">
-        <span class="suggestion-action-label">建议操作</span>
-        <p>${escapeHtml(item.suggested_action || "请继续推进当前事项。")}</p>
+        <span class="suggestion-action-label">${escapeHtml(t("suggestion_action"))}</span>
+        <p>${escapeHtml(item.suggested_action || t("continue_current"))}</p>
       </div>
       <div class="suggestion-actions">
-        <button class="action-button ignore-button" data-choice="ignore" data-id="${escapeHtml(item.suggestion_id)}">忽略</button>
-        <button class="action-button approve-button" data-choice="approve" data-id="${escapeHtml(item.suggestion_id)}">接受并继续</button>
+        <button class="action-button ignore-button" data-choice="ignore" data-id="${escapeHtml(item.suggestion_id)}">${escapeHtml(t("ignore"))}</button>
+        <button class="action-button approve-button" data-choice="approve" data-id="${escapeHtml(item.suggestion_id)}">${escapeHtml(t("approve_continue"))}</button>
       </div>
     </article>`;
   }
@@ -370,9 +656,9 @@
     const root = document.getElementById("projects-content");
     const projects = state.projects;
     const itemCount = projects.reduce((total, project) => total + project.items.length, 0);
-    document.getElementById("project-summary").textContent = `${projects.length} 个 Project · ${itemCount} 个 Item`;
+    document.getElementById("project-summary").textContent = t("status_count", { projects: projects.length, items: itemCount });
     if (!projects.length) {
-      root.innerHTML = '<div class="empty-state"><div><strong>还没有项目</strong><br /><span>收到第一轮可归属的 QA 后，Project 会出现在这里。</span></div></div>';
+      root.innerHTML = `<div class="empty-state"><div><strong>${escapeHtml(t("no_project"))}</strong><br /><span>${escapeHtml(t("no_project_hint"))}</span></div></div>`;
       return;
     }
     root.innerHTML = projects.map(renderProject).join("");
@@ -422,18 +708,18 @@
   function renderProject(project) {
     const items = project.items.length
       ? project.items.map((item) => renderItem(project.id, item)).join("")
-      : '<div class="empty-state">暂无 Item</div>';
+      : `<div class="empty-state">${escapeHtml(t("no_items"))}</div>`;
     const hasItems = project.items.length > 0;
     const expanded = state.expandedProjects.has(project.id);
-    const itemLabel = hasItems ? (expanded ? "收起 Item" : `查看 ${project.items.length} 个 Item`) : "暂无 Item";
+    const itemLabel = hasItems ? (expanded ? t("collapse_items") : t("view_items", { count: project.items.length })) : t("no_items");
     const itemsId = `items-${encodeURIComponent(project.id)}`;
     const projectProgress = progressWidth(project);
     return `<article class="project-card">
       <div class="project-card-top"><button class="project-toggle" data-project-toggle data-project="${escapeHtml(project.id)}" data-item-count="${project.items.length}" type="button" aria-expanded="${expanded ? "true" : "false"}" aria-controls="${escapeHtml(itemsId)}" ${hasItems ? "" : "disabled"}>
         <span class="project-toggle-chevron" aria-hidden="true">${expanded ? "⌃" : "⌄"}</span>
-        <span class="project-title-wrap"><span class="entity-label entity-label-project"><span class="entity-label-key">PROJECT</span><span class="entity-label-name">项目</span></span><span class="project-title-row"><span class="project-name" role="heading" aria-level="3">${escapeHtml(project.name)}</span><span class="project-item-count">${escapeHtml(itemLabel)}</span></span><span class="project-summary" title="${escapeHtml(project.summary)}">${escapeHtml(project.summary)}</span></span>
+        <span class="project-title-wrap"><span class="entity-label entity-label-project"><span class="entity-label-key">PROJECT</span><span class="entity-label-name">${currentLanguage() === "zh" ? "项目" : "Project"}</span></span><span class="project-title-row"><span class="project-name" role="heading" aria-level="3">${escapeHtml(project.name)}</span><span class="project-item-count">${escapeHtml(itemLabel)}</span></span><span class="project-summary" title="${escapeHtml(project.summary)}">${escapeHtml(project.summary)}</span></span>
       </button><span class="status-badge project-status status-${escapeHtml(project.status)}">${statusLabel(project.status)}</span></div>
-      <div class="project-progress-line" role="progressbar" aria-label="项目进度" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${projectProgress}" aria-valuetext="${escapeHtml(`${statusLabel(project.status)} ${projectProgress}%`)}"><div class="project-progress-bar" style="width:${projectProgress}%"></div></div>
+      <div class="project-progress-line" role="progressbar" aria-label="${escapeHtml(t("project_progress"))}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${projectProgress}" aria-valuetext="${escapeHtml(`${statusLabel(project.status)} ${projectProgress}%`)}"><div class="project-progress-bar" style="width:${projectProgress}%"></div></div>
       <div id="${escapeHtml(itemsId)}" class="items-list${expanded ? " open" : ""}" data-items-root="${escapeHtml(project.id)}" aria-hidden="${expanded ? "false" : "true"}">${items}</div>
     </article>`;
   }
@@ -450,7 +736,7 @@
     const label = button.querySelector(".project-item-count");
     if (label) {
       const count = button.dataset.itemCount || "0";
-      label.textContent = open ? "收起 Item" : `查看 ${count} 个 Item`;
+      label.textContent = open ? t("collapse_items") : t("view_items", { count });
     }
   }
 
@@ -470,32 +756,32 @@
   }
 
   function renderItem(projectId, item) {
-    const blocker = item.blocker || "无";
+    const blocker = item.blocker || (currentLanguage() === "zh" ? "无" : "None");
     const eventsId = `events-${encodeURIComponent(projectId)}-${encodeURIComponent(item.id)}`;
     return `<div class="item-card">
       <div class="item-card-main">
         <div class="item-card-body">
-          <div class="item-heading"><div class="item-title-wrap"><div class="entity-label entity-label-item"><span class="entity-label-key">ITEM</span><span class="entity-label-name">事项</span></div><h4>${escapeHtml(item.name)}</h4></div><span class="item-status item-status-${escapeHtml(item.status)}">${statusLabel(item.status)}</span></div>
+          <div class="item-heading"><div class="item-title-wrap"><div class="entity-label entity-label-item"><span class="entity-label-key">ITEM</span><span class="entity-label-name">${escapeHtml(currentLanguage() === "zh" ? "事项" : "Item")}</span></div><h4>${escapeHtml(item.name)}</h4></div><span class="item-status item-status-${escapeHtml(item.status)}">${statusLabel(item.status)}</span></div>
           <p class="item-progress" title="${escapeHtml(item.current_progress)}">${escapeHtml(item.current_progress)}</p>
-          <div class="item-meta"><div class="meta-block"><small>下一步</small><span title="${escapeHtml(item.next_step)}">${escapeHtml(item.next_step)}</span></div><div class="meta-block"><small>阻塞</small><span class="${item.blocker ? "blocker-text" : ""}" title="${escapeHtml(blocker)}">${escapeHtml(blocker)}</span></div></div>
+          <div class="item-meta"><div class="meta-block"><small>${escapeHtml(t("next_step"))}</small><span title="${escapeHtml(item.next_step)}">${escapeHtml(item.next_step)}</span></div><div class="meta-block"><small>${escapeHtml(currentLanguage() === "zh" ? "阻塞" : "Blocker")}</small><span class="${item.blocker ? "blocker-text" : ""}" title="${escapeHtml(blocker)}">${escapeHtml(blocker)}</span></div></div>
         </div>
         ${renderItemProgressBar(item)}
       </div>
       <div class="item-card-footer">
-        <button class="event-toggle" data-events data-project="${escapeHtml(projectId)}" data-item="${escapeHtml(item.id)}" aria-expanded="false" aria-controls="${escapeHtml(eventsId)}">查看 ${item.event_count || 0} 条 Event ↓</button>
+        <button class="event-toggle" data-events data-project="${escapeHtml(projectId)}" data-item="${escapeHtml(item.id)}" data-event-count="${item.event_count || 0}" aria-expanded="false" aria-controls="${escapeHtml(eventsId)}">${escapeHtml(t("event_count", { count: item.event_count || 0 }))}</button>
         <div id="${escapeHtml(eventsId)}" class="events" data-events-root="${escapeHtml(projectId)}/${escapeHtml(item.id)}"></div>
       </div>
     </div>`;
   }
 
   function renderItemProgressBar(item) {
-    const stages = ["未开始", "计划中", "进行中", "已完成"];
+    const stages = currentLanguage() === "zh" ? ["未开始", "计划中", "进行中", "已完成"] : ["Not started", "Planned", "In progress", "Completed"];
     const stageByStatus = { planned: 1, in_progress: 2, blocked: 2, completed: 3 };
     const activeIndex = Object.prototype.hasOwnProperty.call(stageByStatus, item.status)
       ? stageByStatus[item.status]
       : 0;
     const blocked = item.status === "blocked";
-    const currentLabel = blocked ? "进行中（阻塞）" : stages[activeIndex];
+    const currentLabel = blocked ? `${stages[2]} (${t("blocked_short")})` : stages[activeIndex];
     const segments = stages.map((label, index) => {
       const phase = index < activeIndex ? "done" : index === activeIndex ? "current" : "upcoming";
       const blockedClass = blocked && index === 2 ? " item-progress-segment-blocked" : "";
@@ -505,8 +791,8 @@
       const currentAttribute = index === activeIndex ? ' aria-current="step"' : "";
       return `<span class="item-progress-label${index === activeIndex ? " is-current" : ""}"${currentAttribute}>${label}</span>`;
     }).join("");
-    return `<div class="item-progress-widget" role="group" aria-label="事项进度：${escapeHtml(currentLabel)}">
-      <div class="item-progress-widget-head"><span class="item-progress-widget-title">进度</span><strong>${escapeHtml(currentLabel)}</strong>${blocked ? '<span class="item-progress-warning">阻塞</span>' : ""}</div>
+    return `<div class="item-progress-widget" role="group" aria-label="${escapeHtml(t("item_progress"))}: ${escapeHtml(currentLabel)}">
+      <div class="item-progress-widget-head"><span class="item-progress-widget-title">${escapeHtml(t("progress"))}</span><strong>${escapeHtml(currentLabel)}</strong>${blocked ? `<span class="item-progress-warning">${escapeHtml(t("blocked_short"))}</span>` : ""}</div>
       <div class="item-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="3" aria-valuenow="${activeIndex}" aria-valuetext="${escapeHtml(currentLabel)}">${segments}</div>
       <div class="item-progress-labels">${labels}</div>
     </div>`;
@@ -525,9 +811,9 @@
     container.classList.toggle("open", open);
     button.setAttribute("aria-expanded", open ? "true" : "false");
     if (open) {
-      button.textContent = button.textContent.replace("查看", "收起").replace("↓", "↑");
+      button.textContent = t("event_count_up", { count: button.dataset.eventCount || "0" });
     } else {
-      button.textContent = button.textContent.replace("↑", "↓").replace("收起", "查看");
+      button.textContent = t("event_count", { count: button.dataset.eventCount || "0" });
     }
   }
 
@@ -556,7 +842,7 @@
   function renderEventList(container, events, itemKeyValue) {
     container.innerHTML = events.length
       ? events.map((event, index) => renderEvent(event, itemKeyValue, index)).join("")
-      : '<div class="muted-label">暂无历史 Event</div>';
+      : `<div class="muted-label">${escapeHtml(t("no_events"))}</div>`;
     container.dataset.loaded = "1";
     bindEventDetails(container, itemKeyValue);
   }
@@ -590,7 +876,7 @@
     }
 
     if (!state.eventLoads.has(key)) {
-      container.innerHTML = '<div class="loading-state"><span class="spinner"></span>正在读取历史…</div>';
+      container.innerHTML = `<div class="loading-state"><span class="spinner"></span>${escapeHtml(t("loading_history"))}</div>`;
       const request = fetch(`/api/projects/${encodeURIComponent(projectId)}/items/${encodeURIComponent(itemId)}/events?limit=12`)
         .then((response) => {
           if (!response.ok) throw new Error("events request failed");
@@ -610,7 +896,7 @@
       if (button.isConnected) renderEventList(container, events, key);
       return events;
     } catch (error) {
-      if (button.isConnected) container.innerHTML = '<div class="error-state">读取 Event 失败，请稍后重试。</div>';
+      if (button.isConnected) container.innerHTML = `<div class="error-state">${escapeHtml(t("events_failed"))}</div>`;
       throw error;
     } finally {
       if (state.eventLoads.get(key) === request) state.eventLoads.delete(key);
@@ -639,10 +925,12 @@
     const source = event.source || {};
     const eventId = event.id || `${event.completed_at || "event"}-${index}`;
     const detailId = `event-detail-${encodeURIComponent(itemKeyValue)}-${encodeURIComponent(eventId)}`;
-    return `<div class="event-row" data-event-detail data-event-id="${escapeHtml(eventId)}" data-item-key="${escapeHtml(itemKeyValue)}" role="button" tabindex="0" aria-expanded="false" aria-controls="${escapeHtml(detailId)}"><div class="event-summary"><strong>${escapeHtml(event.summary || event.id)}</strong><span class="muted-label">${escapeHtml(formatTime(event.completed_at))}</span></div><div class="event-meta"><span>${escapeHtml(source.platform || "unknown")} · ${escapeHtml(source.session_id || "unknown")}</span><span>点击查看 QA</span></div><div id="${escapeHtml(detailId)}" class="event-detail"><b>问题：</b>${escapeHtml(event.question || "—")}\n\n<b>回答：</b>${escapeHtml(event.answer || "—")}</div></div>`;
+    return `<div class="event-row" data-event-detail data-event-id="${escapeHtml(eventId)}" data-item-key="${escapeHtml(itemKeyValue)}" role="button" tabindex="0" aria-expanded="false" aria-controls="${escapeHtml(detailId)}"><div class="event-summary"><strong>${escapeHtml(event.summary || event.id)}</strong><span class="muted-label">${escapeHtml(formatTime(event.completed_at))}</span></div><div class="event-meta"><span>${escapeHtml(source.platform || t("unknown_source"))} · ${escapeHtml(source.session_id || t("unknown_source"))}</span><span>${escapeHtml(t("view_qa"))}</span></div><div id="${escapeHtml(detailId)}" class="event-detail"><b>${escapeHtml(t("question"))}：</b>${escapeHtml(event.question || "—")}\n\n<b>${escapeHtml(t("answer"))}：</b>${escapeHtml(event.answer || "—")}</div></div>`;
   }
 
   async function respond(id, choice, button) {
+    if (state.pendingResponses.has(id)) return;
+    state.pendingResponses.add(id);
     const buttons = button.parentElement.querySelectorAll("button");
     buttons.forEach((item) => { item.disabled = true; });
     try {
@@ -652,12 +940,15 @@
         body: JSON.stringify({ suggestion_id: id, choice, responded_at: new Date().toISOString() }),
       });
       const body = await response.json();
-      if (!response.ok) throw new Error(body.detail || body.error || "提交失败");
-      showToast(choice === "approve" ? "已接受，正在继续原 ACP Session。" : "已忽略，这条建议不会执行。");
+      if (!response.ok) throw new Error(body.detail || body.error || t("connection_failed"));
+      showToast(choice === "approve" ? t("accepted_continue") : t("ignored_no_execute"));
       await refresh();
     } catch (error) {
       buttons.forEach((item) => { item.disabled = false; });
-      showToast(`提交失败：${error.message}`, true);
+      showToast(t("submit_failed", { error: error.message }), true);
+    } finally {
+      state.pendingResponses.delete(id);
+      if (!state.connectionFailed) renderSuggestion();
     }
   }
 
@@ -680,15 +971,19 @@
       state.projects = data.projects || [];
       state.suggestions = data.suggestions || [];
       state.latestDecision = data.latest_decision;
+      state.loaded = true;
+      state.connectionFailed = false;
+      state.generatedAt = data.generated_at;
       renderSuggestion();
       renderProjects();
       restoreProjectsFocus(focusedProjectsElement);
       await loadDailyReport(data);
-      document.getElementById("last-updated").textContent = `更新于 ${formatTime(data.generated_at)}`;
+      syncOutputLanguage();
+      renderConnectionState();
     } catch (_error) {
-      document.getElementById("last-updated").textContent = "服务连接失败";
-      document.getElementById("suggestion-content").innerHTML = '<div class="error-state">无法连接 Proactive Agent 服务。</div>';
-      document.getElementById("projects-content").innerHTML = '<div class="error-state">请确认服务已启动，并刷新页面。</div>';
+      state.connectionFailed = true;
+      renderConnectionState();
+      renderConnectionError();
     }
   }
 
@@ -696,7 +991,31 @@
   document.getElementById("daily-report-close")?.addEventListener("click", closeDailyReport);
   document.getElementById("daily-report-done")?.addEventListener("click", closeDailyReport);
   document.querySelector("[data-report-close]")?.addEventListener("click", closeDailyReport);
+  document.getElementById("language-select")?.addEventListener("change", (event) => {
+    const value = event.target.value;
+    state.language = value === "zh" || value === "en" ? value : "auto";
+    try {
+      if (state.language === "auto") window.localStorage.removeItem(languageStorageKey);
+      else window.localStorage.setItem(languageStorageKey, state.language);
+    } catch (_error) {
+      // Language selection still applies for this page when storage is unavailable.
+    }
+    redrawLanguage();
+  });
+  window.addEventListener("languagechange", () => {
+    if (state.language === "auto") redrawLanguage();
+  });
+  document.addEventListener("click", (event) => {
+    const settings = document.getElementById("language-settings");
+    if (settings && !settings.contains(event.target)) settings.open = false;
+  });
   document.addEventListener("keydown", (event) => {
+    const settings = document.getElementById("language-settings");
+    if (event.key === "Escape" && settings?.open) {
+      settings.open = false;
+      settings.querySelector("summary")?.focus();
+      return;
+    }
     if (event.key === "Escape" && state.dailyReportOpen) {
       event.preventDefault();
       closeDailyReport();
@@ -719,6 +1038,7 @@
     }
   });
 
+  applyLanguage();
   refresh();
   window.setInterval(refresh, 2200);
 })();

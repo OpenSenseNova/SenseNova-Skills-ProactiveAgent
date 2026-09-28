@@ -137,6 +137,56 @@ h2 { margin-bottom: 0; font-size: clamp(24px, 2.4vw, 32px); line-height: 1.2; le
 .report-trigger:hover { color: var(--accent); border-color: var(--accent); }
 .report-unread { width: 6px; height: 6px; border-radius: 50%; background: var(--alert); }
 
+.language-control {
+  position: relative;
+  z-index: 8;
+  margin-left: 8px;
+  font-size: 11px;
+}
+.language-control summary {
+  cursor: pointer;
+  padding: 5px 8px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  color: var(--muted);
+  background: var(--surface);
+  list-style: none;
+}
+.language-control summary::-webkit-details-marker { display: none; }
+.language-control summary:hover { color: var(--accent); border-color: var(--accent); }
+.language-control summary:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
+.language-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  display: grid;
+  gap: 8px;
+  min-width: 180px;
+  padding: 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+.language-control label { white-space: nowrap; }
+.language-control select {
+  min-width: 58px;
+  cursor: pointer;
+  padding: 2px 18px 2px 4px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  color: var(--ink);
+  background: transparent;
+  font: inherit;
+}
+.language-control select:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.language-note { display: grid; gap: 7px; padding-top: 9px; border-top: 1px solid var(--line); color: var(--muted); font-size: 10px; line-height: 1.45; }
+.language-note > div { display: flex; justify-content: space-between; gap: 12px; }
+.language-note strong { color: var(--ink); font-weight: 650; text-align: right; }
+.language-note p { margin: 0; }
+.prompt-details summary { cursor: pointer; color: var(--accent); }
+.prompt-details p { margin: 6px 0 0; }
+
 .service-state {
   flex: 0 0 auto;
   gap: var(--space-2);
