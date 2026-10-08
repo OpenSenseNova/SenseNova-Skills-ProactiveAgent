@@ -36,6 +36,16 @@ class HermesConnectorResources:
     tui_patch: Path | None
 
 
+@dataclass(frozen=True, slots=True)
+class OpenClawConnectorResources:
+    """Materialized files needed by the OpenClaw observation plugin."""
+
+    plugin_root: Path
+    manifest: Path
+    package: Path
+    entrypoint: Path
+
+
 def connector_resource(relative_path: str) -> Traversable:
     """Return one connector resource from the installed package.
 
@@ -95,8 +105,30 @@ def materialize_hermes_resources(
         )
 
 
+@contextmanager
+def materialize_openclaw_resources() -> Iterator[OpenClawConnectorResources]:
+    """Yield local paths for the OpenClaw plugin package."""
+
+    with ExitStack() as stack:
+        manifest = stack.enter_context(
+            as_file(connector_resource("openclaw/plugin/openclaw.plugin.json"))
+        )
+        package = stack.enter_context(
+            as_file(connector_resource("openclaw/plugin/package.json"))
+        )
+        entrypoint = stack.enter_context(
+            as_file(connector_resource("openclaw/plugin/index.js"))
+        )
+        yield OpenClawConnectorResources(
+            plugin_root=entrypoint.parent,
+            manifest=manifest,
+            package=package,
+            entrypoint=entrypoint,
+        )
+
+
 def packaged_resource_inventory() -> tuple[str, ...]:
-    """Return the resource paths that the first Hermes package promises."""
+    """Return the connector resource paths shipped in the package."""
 
     return (
         "hermes/classic/hermes_hook.py",
@@ -104,6 +136,9 @@ def packaged_resource_inventory() -> tuple[str, ...]:
         "hermes/tui/plugin.yaml",
         "hermes/tui/web_bridge.ts",
         "hermes/tui/patches/hermes-tui-acp-submit.patch",
+        "openclaw/plugin/index.js",
+        "openclaw/plugin/openclaw.plugin.json",
+        "openclaw/plugin/package.json",
     )
 
 
@@ -117,6 +152,7 @@ def _normalize_relative_path(relative_path: str) -> str:
         or any(part in {"", ".", ".."} for part in parts)
         or not normalized.startswith("acp/")
         and not normalized.startswith("hermes/")
+        and not normalized.startswith("openclaw/")
     ):
         raise ValueError("relative_path must stay inside the connector tree")
     return normalized
@@ -135,7 +171,9 @@ def _checkout_connector_root() -> Path:
 __all__ = [
     "CONNECTOR_PACKAGE",
     "HermesConnectorResources",
+    "OpenClawConnectorResources",
     "connector_resource",
     "materialize_hermes_resources",
+    "materialize_openclaw_resources",
     "packaged_resource_inventory",
 ]

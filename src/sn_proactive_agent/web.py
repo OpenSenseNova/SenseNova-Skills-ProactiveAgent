@@ -39,10 +39,12 @@ class DashboardProjection:
         journal: RuntimeJournal,
         *,
         daily_reports: DailyReportService | None = None,
+        harnesses: object | None = None,
     ) -> None:
         self.store = store
         self.journal = journal
         self.daily_reports = daily_reports
+        self.harnesses = harnesses
 
     def snapshot(self) -> dict[str, Any]:
         snapshot: dict[str, Any] = {
@@ -51,6 +53,8 @@ class DashboardProjection:
             "latest_decision": self._latest_decision(),
             "projects": self._projects(),
         }
+        if self.harnesses is not None:
+            snapshot["harnesses"] = self.harnesses.snapshot()
         if self.daily_reports is not None:
             # The daily brief is an auxiliary read model.  If its persisted
             # record is temporarily malformed or unavailable, keep the main

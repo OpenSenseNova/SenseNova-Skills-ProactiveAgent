@@ -12,6 +12,7 @@ from wsgiref.util import setup_testing_defaults
 from sn_proactive_agent.api import create_app
 from sn_proactive_agent.contracts import SuggestionReady
 from sn_proactive_agent.journal import RuntimeJournal
+from sn_proactive_agent.harnesses import HarnessRegistry
 from sn_proactive_agent.storage import ItemState, MarkdownStore, ProjectMetadata
 
 
@@ -92,6 +93,7 @@ class WebDashboardTests(unittest.TestCase):
         self.assertIn("日报", html)
         self.assertIn('id="daily-report-modal"', html)
         self.assertIn('id="daily-report-open"', html)
+        self.assertIn('id="harness-settings"', html)
 
     def test_daily_report_assets_expose_first_open_modal_behaviour(self) -> None:
         status, _headers, body = request(self.app, "GET", "/static/app.js")
@@ -236,6 +238,21 @@ updates:
         self.assertEqual(payload["events"][0]["source"]["platform"], "hermes-acp")
         self.assertEqual(payload["events"][0]["question"], "材料还没有确认。")
         self.assertEqual(payload["events"][0]["answer"], "已记录阻塞。")
+
+    def test_dashboard_exposes_harness_observation_state(self) -> None:
+        registry = HarnessRegistry(
+            self.data_root,
+            available={"hermes": True, "codex": True},
+            connected={"hermes": True},
+        )
+        app = create_app(store=self.store, journal=self.journal, harnesses=registry)
+
+        status, _headers, body = request(app, "GET", "/api/dashboard")
+
+        self.assertEqual(status, 200)
+        harnesses = json.loads(body.decode("utf-8"))["harnesses"]
+        self.assertEqual(harnesses[0]["status"], "connected")
+        self.assertEqual(harnesses[1]["status"], "disabled")
 
     def test_dashboard_requires_storage_configuration(self) -> None:
         app = create_app()

@@ -20,6 +20,7 @@ from .contracts import (
 )
 from .daily_report import DailyReportError, DailyReportNotFoundError, DailyReportService
 from .journal import RuntimeJournal
+from .harnesses import HarnessRegistry
 from .preferences import PreferenceStore, normalize_output_language
 from .storage import MarkdownStore, StorageError
 from .web import DashboardProjection
@@ -54,10 +55,12 @@ class EventApplication:
         store: MarkdownStore | None = None,
         journal: RuntimeJournal | None = None,
         daily_reports: DailyReportService | None = None,
+        harnesses: HarnessRegistry | None = None,
     ) -> None:
         self._handler = handler or NullEventHandler()
         self._bridge = bridge
         self._daily_reports = daily_reports
+        self._harnesses = harnesses
         self._preferences = PreferenceStore(store.data_root) if store is not None else None
         if self._daily_reports is None and store is not None and journal is not None:
             self._daily_reports = DailyReportService(store, journal)
@@ -66,6 +69,8 @@ class EventApplication:
             if store is not None and journal is not None
             else None
         )
+        if self._dashboard is not None and harnesses is not None:
+            self._dashboard.harnesses = harnesses
         self._web_root = Path(__file__).resolve().parent / "web"
         # This is intentionally a best-effort bootstrap.  The same check is
         # repeated on every report/dashboard request, so a service that starts
@@ -137,6 +142,9 @@ class EventApplication:
                 )
             return self._respond(start_response, HTTPStatus.OK, self._dashboard.snapshot())
 
+        if path == "/api/harnesses":
+            return self._harness_settings(environ, start_response, method)
+
         if path == "/api/preferences/language":
             return self._language_preference(environ, start_response, method)
 
@@ -202,6 +210,23 @@ class EventApplication:
                 HTTPStatus.UNPROCESSABLE_ENTITY,
                 {"error": "invalid_event", "detail": str(exc)},
             )
+
+        # A disabled Harness remains visible in settings, but its inbound
+        # turns must not change Project/Item state.  Return an accepted HTTP
+        # response so an installed hook does not retry the same event forever;
+        # the body makes the filtering explicit for diagnostics.
+        platform = getattr(event, "platform", None)
+        if self._harnesses is not None and isinstance(platform, str):
+            if not self._harnesses.allows_platform(platform):
+                return self._respond(
+                    start_response,
+                    HTTPStatus.ACCEPTED,
+                    {
+                        "accepted": False,
+                        "ignored": "harness_disabled",
+                        "platform": platform,
+                    },
+                )
 
         self._handler.handle(event)
         if self._bridge is not None and isinstance(event, (TurnStarted, TurnCompleted)):
@@ -284,6 +309,37 @@ class EventApplication:
             )
         language = self._preferences.set_output_language(language)
         return self._respond(start_response, HTTPStatus.OK, {"output_language": language})
+
+    def _harness_settings(self, environ, start_response, method):
+        if self._harnesses is None:
+            return self._respond(start_response, HTTPStatus.SERVICE_UNAVAILABLE, {"error": "harness_settings_not_configured"})
+        if method == "GET":
+            return self._respond(start_response, HTTPStatus.OK, {"harnesses": self._harnesses.snapshot()})
+        if method != "POST":
+            return self._respond(
+                start_response,
+                HTTPStatus.METHOD_NOT_ALLOWED,
+                {"error": "method_not_allowed"},
+                headers=[("Allow", "GET, POST")],
+            )
+        try:
+            payload = self._read_json(environ)
+            if not isinstance(payload, dict):
+                raise ValueError("payload must be an object")
+            harness_id = payload.get("id")
+            enabled = payload.get("enabled")
+            if not isinstance(harness_id, str) or not harness_id.strip():
+                raise ValueError("id is required")
+            if not isinstance(enabled, bool):
+                raise ValueError("enabled must be boolean")
+            result = self._harnesses.set_enabled(harness_id.strip(), enabled)
+        except KeyError:
+            return self._respond(start_response, HTTPStatus.NOT_FOUND, {"error": "unknown_harness"})
+        except RuntimeError as exc:
+            return self._respond(start_response, HTTPStatus.CONFLICT, {"error": "harness_unavailable", "detail": str(exc)})
+        except (TypeError, ValueError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+            return self._respond(start_response, HTTPStatus.BAD_REQUEST, {"error": "invalid_harness_setting", "detail": str(exc)})
+        return self._respond(start_response, HTTPStatus.OK, {"harness": result})
 
     def _bridge_events(
         self,
@@ -586,6 +642,7 @@ def create_app(
     store: MarkdownStore | None = None,
     journal: RuntimeJournal | None = None,
     daily_reports: DailyReportService | None = None,
+    harnesses: HarnessRegistry | None = None,
 ) -> EventApplication:
     return EventApplication(
         handler,
@@ -593,6 +650,7 @@ def create_app(
         store=store,
         journal=journal,
         daily_reports=daily_reports,
+        harnesses=harnesses,
     )
 
 

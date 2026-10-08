@@ -4,6 +4,7 @@
 include README.md README.cn.md README.pypi.md README.pypi.cn.md pyproject.toml
 recursive-include src/sn_proactive_agent *.py *.html *.css *.js
 recursive-include src/sn_proactive_agent_connectors *.py *.yaml *.patch *.ts
+recursive-include src/sn_proactive_agent_connectors/openclaw/plugin *.js *.json
 prune build
 prune dist
 prune data

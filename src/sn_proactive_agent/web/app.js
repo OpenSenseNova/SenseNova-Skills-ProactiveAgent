@@ -3,6 +3,7 @@
 
   const state = {
     projects: [],
+    harnesses: [],
     suggestions: [],
     latestDecision: null,
     dailyReport: null,
@@ -28,6 +29,16 @@
   const translations = {
     "zh": {
       "settings": "设置",
+      "harness_settings": "监测来源",
+      "monitor_sources": "选择要记录的 Harness",
+      "loading_harnesses": "正在读取…",
+      "enabled": "已启用",
+      "disabled": "未启用",
+      "connected": "已连接",
+      "ready": "可用",
+      "unavailable": "未配置",
+      "harness_settings_note": "关闭后，该来源的新对话不会更新项目状态。",
+      "harness_update_failed": "监测设置更新失败：{error}",
       "language_auto": "跟随系统",
       "interface_language": "界面语言",
       "agent_language": "Agent 整理语言",
@@ -94,8 +105,8 @@
       "suggestion_processed": "最近建议已处理",
       "reason_failed": "续跑失败，详细原因已写入 runtime.jsonl。",
       "reason_ignored": "用户选择忽略，系统没有执行建议动作。",
-      "reason_completed": "用户已授权，原 ACP Session 已完成建议动作并回流结果。",
-      "reason_resuming": "用户已授权，系统正在处理原 ACP Session。",
+      "reason_completed": "用户已授权，原会话已完成建议动作并回流结果。",
+      "reason_resuming": "用户已授权，系统正在原会话中执行建议动作。",
       "decision_recorded": "本轮决策已记录。",
       "status_updated": "本轮状态已更新，暂不打扰。",
       "decision_expired": "本轮判断已过期，状态更新仍已保留。",
@@ -121,7 +132,7 @@
       "continue_current": "请继续推进当前事项。",
       "ignore": "忽略",
       "approve_continue": "接受并继续",
-      "accepted_continue": "已接受，正在继续原 ACP Session。",
+      "accepted_continue": "已接受，正在继续原会话。",
       "ignored_no_execute": "已忽略，这条建议不会执行。",
       "submit_failed": "提交失败：{error}",
       "cannot_connect": "无法连接 Proactive Agent 服务。",
@@ -134,6 +145,16 @@
     },
     "en": {
       "settings": "Settings",
+      "harness_settings": "Sources",
+      "monitor_sources": "Choose Harnesses to record",
+      "loading_harnesses": "Loading…",
+      "enabled": "Enabled",
+      "disabled": "Disabled",
+      "connected": "Connected",
+      "ready": "Available",
+      "unavailable": "Not configured",
+      "harness_settings_note": "When disabled, new turns from this source will not update projects.",
+      "harness_update_failed": "Could not update source: {error}",
       "language_auto": "System default",
       "interface_language": "Interface language",
       "agent_language": "Agent content language",
@@ -200,8 +221,8 @@
       "suggestion_processed": "Latest suggestion processed",
       "reason_failed": "Resume failed; details are in runtime.jsonl.",
       "reason_ignored": "You chose to ignore it. No action was executed.",
-      "reason_completed": "You approved it; the original ACP Session completed and returned a result.",
-      "reason_resuming": "You approved it; the original ACP Session is processing the action.",
+      "reason_completed": "You approved it; the original session completed and returned a result.",
+      "reason_resuming": "You approved it; the original session is processing the action.",
       "decision_recorded": "This round's decision was recorded.",
       "status_updated": "State updated without interrupting you.",
       "decision_expired": "This decision expired; the state update was kept.",
@@ -227,7 +248,7 @@
       "continue_current": "Continue with the current item.",
       "ignore": "Ignore",
       "approve_continue": "Accept & continue",
-      "accepted_continue": "Accepted. Continuing the original ACP Session.",
+      "accepted_continue": "Accepted. Continuing the original session.",
       "ignored_no_execute": "Ignored. No action was executed.",
       "submit_failed": "Could not submit: {error}",
       "cannot_connect": "Could not connect to Proactive Agent.",
@@ -269,6 +290,7 @@
     document.title = `${t("brand_name")} · ${currentLanguage() === "zh" ? "工作台" : "Dashboard"}`;
     syncOutputLanguage();
     renderConnectionState();
+    renderHarnesses();
   }
 
   let lastSyncedOutputLanguage = null;
@@ -298,6 +320,51 @@
   function renderConnectionState() {
     document.getElementById("last-updated").textContent = state.connectionFailed
       ? t("connection_failed") : state.loaded ? t("updated_at", { value: formatTime(state.generatedAt) }) : t("connecting");
+  }
+
+  function harnessStatusLabel(status) {
+    return t(status === "connected" ? "connected" : status === "ready" ? "ready" : status === "unavailable" ? "unavailable" : status === "disabled" ? "disabled" : "unknown");
+  }
+
+  function renderHarnesses() {
+    const root = document.getElementById("harness-list");
+    if (!root) return;
+    if (!state.harnesses.length) {
+      root.innerHTML = `<div class="harness-loading">${escapeHtml(t("unavailable"))}</div>`;
+      return;
+    }
+    root.innerHTML = state.harnesses.map((harness) => {
+      const status = harnessStatusLabel(harness.status);
+      const disabled = !harness.available ? " disabled" : "";
+      return `<label class="harness-row${harness.available ? "" : " is-unavailable"}">
+        <span class="harness-row-copy"><strong>${escapeHtml(harness.label || harness.id)}</strong><small>${escapeHtml(status)}</small></span>
+        <input type="checkbox" data-harness-id="${escapeHtml(harness.id)}"${harness.enabled ? " checked" : ""}${disabled} aria-label="${escapeHtml(harness.label || harness.id)}" />
+      </label>`;
+    }).join("");
+    root.querySelectorAll("[data-harness-id]").forEach((input) => {
+      input.addEventListener("change", () => updateHarness(input));
+    });
+  }
+
+  async function updateHarness(input) {
+    const harnessId = input.dataset.harnessId;
+    if (!harnessId) return;
+    input.disabled = true;
+    try {
+      const response = await fetch("/api/harnesses", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: harnessId, enabled: input.checked }),
+      });
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.detail || body.error || t("connection_failed"));
+      state.harnesses = state.harnesses.map((harness) => harness.id === harnessId ? body.harness : harness);
+      renderHarnesses();
+      showToast(input.checked ? t("enabled") : t("disabled"));
+    } catch (error) {
+      showToast(t("harness_update_failed", { error: error.message }), true);
+      await refresh();
+    }
   }
 
   function redrawLanguage() {
@@ -969,6 +1036,7 @@
       if (!response.ok) throw new Error("dashboard request failed");
       const data = await response.json();
       state.projects = data.projects || [];
+      state.harnesses = data.harnesses || [];
       state.suggestions = data.suggestions || [];
       state.latestDecision = data.latest_decision;
       state.loaded = true;
@@ -976,6 +1044,7 @@
       state.generatedAt = data.generated_at;
       renderSuggestion();
       renderProjects();
+      renderHarnesses();
       restoreProjectsFocus(focusedProjectsElement);
       await loadDailyReport(data);
       syncOutputLanguage();
@@ -1010,11 +1079,13 @@
     if (settings && !settings.contains(event.target)) settings.open = false;
   });
   document.addEventListener("keydown", (event) => {
-    const settings = document.getElementById("language-settings");
-    if (event.key === "Escape" && settings?.open) {
-      settings.open = false;
-      settings.querySelector("summary")?.focus();
-      return;
+    if (event.key === "Escape") {
+      const settings = document.getElementById("language-settings");
+      if (settings?.open) {
+        settings.open = false;
+        settings.querySelector("summary")?.focus();
+        return;
+      }
     }
     if (event.key === "Escape" && state.dailyReportOpen) {
       event.preventDefault();

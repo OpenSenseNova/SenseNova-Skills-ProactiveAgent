@@ -1,0 +1,22 @@
+{
+  "id": "sn-proactive-agent",
+  "name": "SN Proactive Agent",
+  "description": "Reports OpenClaw turns to the local SN Proactive Agent service.",
+  "activation": {
+    "onStartup": true
+  },
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "serviceUrl": {
+        "type": "string",
+        "default": "http://127.0.0.1:8080"
+      },
+      "enabled": {
+        "type": "boolean",
+        "default": true
+      }
+    }
+  }
+}

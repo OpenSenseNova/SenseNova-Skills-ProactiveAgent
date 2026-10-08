@@ -4,6 +4,8 @@ English · [Chinese](https://github.com/OpenSenseNova/SenseNova-Skills-Proactive
 
 Proactive Agent keeps project progress up to date across your AI conversations and suggests useful next steps that you can accept or ignore.
 
+Supports Hermes and OpenClaw.
+
 ## Where it helps
 
 - **Keep project progress in view.** Organize goals, progress, blockers, and next steps from connected conversations. Expand a project in the dashboard to see its tasks and progress bars, which update as new progress is recorded.
@@ -17,7 +19,7 @@ Suggestions appear as short cards in the dashboard. Accept one to have the assis
 
 ## Getting started
 
-The renamed `sn-proactive-agent` package is available from the [GitHub `v0.1.3` Release](https://github.com/OpenSenseNova/SenseNova-Skills-ProactiveAgent/releases/tag/v0.1.3). It is not published to PyPI yet.
+Follow the [setup Skill](https://github.com/OpenSenseNova/SenseNova-Skills-ProactiveAgent/blob/main/skills/sn-proactive-agent/SKILL.md) to download and install the verified runtime package from [GitHub Releases](https://github.com/OpenSenseNova/SenseNova-Skills-ProactiveAgent/releases).
 
 Use the [setup Skill](https://github.com/OpenSenseNova/SenseNova-Skills-ProactiveAgent/blob/main/skills/sn-proactive-agent/SKILL.md) with your agent to install the service and connect your assistant, or follow the [installation guide](https://github.com/OpenSenseNova/SenseNova-Skills-ProactiveAgent/blob/main/skills/sn-proactive-agent/references/install/overview.md).
 

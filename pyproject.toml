@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "sn-proactive-agent"
-version = "0.1.3"
+version = "0.1.4"
 description = "本地主动记忆服务：记录项目进展，适时提醒下一步。"
 readme = "README.pypi.md"
 requires-python = ">=3.11"
@@ -20,6 +20,7 @@ packages = [
   "sn_proactive_agent_connectors.acp",
   "sn_proactive_agent_connectors.acp.targets",
   "sn_proactive_agent_connectors.codex",
+  "sn_proactive_agent_connectors.openclaw",
   "sn_proactive_agent_connectors.hermes",
   "sn_proactive_agent_connectors.hermes.classic",
   "sn_proactive_agent_connectors.hermes.tui",
@@ -37,3 +38,4 @@ sn_proactive_agent_connectors = "src/sn_proactive_agent_connectors"
 [tool.setuptools.package-data]
 sn_proactive_agent = ["web/*.html", "web/*.css", "web/*.js"]
 "sn_proactive_agent_connectors.hermes.tui" = ["plugin.yaml", "patches/*.patch", "*.ts"]
+"sn_proactive_agent_connectors.openclaw" = ["plugin/*"]

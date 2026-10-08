@@ -4,6 +4,8 @@
 
 Proactive Agent 从你与 AI 的多轮对话中持续整理项目进展，并提出有用的下一步建议，由你决定接受或忽略。
 
+支持 Hermes 和 OpenClaw。
+
 ## 它能帮你做什么
 
 - **持续整理项目进展。** 从已接入的对话中整理目标、进展、阻塞和下一步。展开工作台中的项目，可以看到下面的事项与进度条，并随新记录的进展更新。
@@ -17,7 +19,7 @@ Proactive Agent 从你与 AI 的多轮对话中持续整理项目进展，并提
 
 ## 如何开始
 
-改名后的 `sn-proactive-agent` 已发布到 [GitHub `v0.1.3` Release](https://github.com/OpenSenseNova/SenseNova-Skills-ProactiveAgent/releases/tag/v0.1.3)，目前还未发布到 PyPI。
+请按 [安装 Skill](https://github.com/OpenSenseNova/SenseNova-Skills-ProactiveAgent/blob/main/skills/sn-proactive-agent/SKILL.md) 中的说明，从 [GitHub Release](https://github.com/OpenSenseNova/SenseNova-Skills-ProactiveAgent/releases) 下载并安装经过校验的运行包。
 
 让 Agent 按照 [安装 Skill](https://github.com/OpenSenseNova/SenseNova-Skills-ProactiveAgent/blob/main/skills/sn-proactive-agent/SKILL.md) 帮你安装服务并接入助手，也可以自行参考 [安装指南](https://github.com/OpenSenseNova/SenseNova-Skills-ProactiveAgent/blob/main/skills/sn-proactive-agent/references/install/overview.md)。
 

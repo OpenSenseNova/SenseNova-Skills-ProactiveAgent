@@ -16,12 +16,13 @@ from wsgiref.simple_server import WSGIServer, make_server
 from . import __version__
 from .api import create_app
 from .bridge import BridgeHub
-from .connector import ConnectorRouter, HermesCliConnector, HermesTuiConnector
+from .connector import ConnectorRouter, HermesCliConnector, HermesTuiConnector, OpenClawConnector
 from .contracts import SuggestionChoice, SuggestionResponded
 from .core import ProactiveAgentCore
 from .daily_report import DailyReportService
 from .environment import env_value
 from .journal import RuntimeJournal
+from .harnesses import HarnessRegistry
 from .lifecycle import (
     LifecycleError,
     default_data_root,
@@ -32,6 +33,11 @@ from .lifecycle import (
 from .semantic import HermesJsonReasoner, SemanticError, SemanticJudge, SemanticOrganizer
 from .preferences import PreferenceStore
 from .storage import MarkdownStore
+
+try:
+    from sn_proactive_agent_connectors.codex import CodexAppServerTarget
+except ImportError:  # pragma: no cover - source-only service installs may omit connectors
+    CodexAppServerTarget = None  # type: ignore[assignment,misc]
 
 
 class _ThreadingWSGIServer(ThreadingMixIn, WSGIServer):
@@ -202,6 +208,21 @@ def _add_serve_arguments(serve: argparse.ArgumentParser) -> None:
         default=env_value("SN_PROACTIVE_AGENT_HERMES_MODEL"),
     )
     serve.add_argument(
+        "--openclaw",
+        default=env_value("SN_PROACTIVE_AGENT_OPENCLAW") or shutil.which("openclaw"),
+        help="OpenClaw 可执行文件；插件在已有 Gateway 内观测，不启动第二个对话",
+    )
+    serve.add_argument(
+        "--openclaw-gateway-url",
+        default=env_value("SN_PROACTIVE_AGENT_OPENCLAW_GATEWAY_URL", "http://127.0.0.1:18789"),
+        help="OpenClaw Gateway 地址，用于接受建议后在原 Session 续跑",
+    )
+    serve.add_argument(
+        "--openclaw-gateway-token",
+        default=env_value("SN_PROACTIVE_AGENT_OPENCLAW_GATEWAY_TOKEN"),
+        help="OpenClaw Gateway Token（使用 Gateway 鉴权时填写）",
+    )
+    serve.add_argument(
         "--web-only",
         action="store_true",
         default=False,
@@ -317,13 +338,32 @@ def _uninstall(args: argparse.Namespace) -> None:
 
 
 def _serve(args: argparse.Namespace) -> None:
-    if not args.hermes and not args.web_only:
-        raise SystemExit("找不到 Hermes；请用 --hermes 指定可执行文件。")
+    if not args.hermes and not args.openclaw and not args.web_only:
+        raise SystemExit("找不到 Hermes 或 OpenClaw；请指定 --hermes / --openclaw，或使用 --web-only。")
     data_root = args.data_root.expanduser().resolve()
     store = MarkdownStore(data_root)
     journal = RuntimeJournal(data_root)
     preferences = PreferenceStore(data_root)
     daily_reports = DailyReportService(store, journal)
+    codex_available = bool(
+        CodexAppServerTarget is not None
+        and CodexAppServerTarget.discover() is not None
+    )
+    harnesses = HarnessRegistry(
+        data_root,
+        available={
+            "hermes": bool(args.hermes) or bool(args.web_only),
+            "openclaw": bool(args.openclaw),
+            "codex": codex_available,
+        },
+        connected={
+            "hermes": bool(args.hermes),
+            "openclaw": False,
+            # V1 observes Connector-managed Codex App Server sessions only;
+            # an already-open Codex Desktop window is not attached here.
+            "codex": False,
+        },
+    )
     reasoner = (
         HermesJsonReasoner(
             args.hermes,
@@ -355,13 +395,22 @@ def _serve(args: argparse.Namespace) -> None:
         log=print,
         show_suggestions=not args.web_only,
     )
+    openclaw_connector = (
+        OpenClawConnector(
+            gateway_url=args.openclaw_gateway_url,
+            gateway_token=args.openclaw_gateway_token,
+            log=print,
+        )
+        if args.openclaw
+        else None
+    )
     core = ProactiveAgentCore(
         store,
         journal,
         organizer,
         judge,
         ConnectorRouter(
-            tuple(item for item in (connector, tui_connector) if item is not None)
+            tuple(item for item in (connector, tui_connector, openclaw_connector) if item is not None)
         ),
     )
     core_box["core"] = core
@@ -371,6 +420,7 @@ def _serve(args: argparse.Namespace) -> None:
         store=store,
         journal=journal,
         daily_reports=daily_reports,
+        harnesses=harnesses,
     )
     # Generate the previous day's closeout immediately when the service starts
     # (including after downtime), then keep a tiny midnight checker alive for
@@ -390,7 +440,19 @@ def _serve(args: argparse.Namespace) -> None:
                 f"Hermes: {args.hermes or '未配置（Web-only 展示模式）'}",
                 flush=True,
             )
+            print(
+                f"OpenClaw: {args.openclaw or '未配置（需在 OpenClaw Gateway 安装插件）'}",
+                flush=True,
+            )
             print(f"Web Dashboard: {service_url}/", flush=True)
+            print(
+                "Harness monitoring: "
+                + ", ".join(
+                    f"{item['label']}={item['status']}"
+                    for item in harnesses.snapshot()
+                ),
+                flush=True,
+            )
             print(
                 "Hermes TUI Bridge: enabled "
                 f"(native suggestions {'disabled' if args.web_only else 'enabled'})",

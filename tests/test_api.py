@@ -12,6 +12,7 @@ from sn_proactive_agent.api import create_app
 from sn_proactive_agent.bridge import BridgeHub
 from sn_proactive_agent.core import OrganizerContext, TurnStorageHandler
 from sn_proactive_agent.contracts import EventType, InboundEvent
+from sn_proactive_agent.harnesses import HarnessRegistry
 from sn_proactive_agent.storage import (
     ItemState,
     ItemUpdate,
@@ -111,6 +112,41 @@ class EventApiTests(unittest.TestCase):
                 json.loads((Path(directory) / "preferences.json").read_text()),
                 {"output_language": "en"},
             )
+
+    def test_harness_settings_are_read_and_persisted(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            store = MarkdownStore(directory)
+            registry = HarnessRegistry(
+                directory,
+                available={"hermes": True, "codex": True},
+                connected={"hermes": True},
+            )
+            app = create_app(store=store, harnesses=registry)
+
+            status, body = request(app, "GET", "/api/harnesses")
+            self.assertEqual(status, 200)
+            self.assertEqual(body["harnesses"][0]["status"], "connected")
+            self.assertFalse(body["harnesses"][1]["enabled"])
+
+            status, body = request(
+                app, "POST", "/api/harnesses", {"id": "codex", "enabled": True}
+            )
+            self.assertEqual(status, 200)
+            self.assertEqual(body["harness"]["status"], "ready")
+            self.assertTrue(registry.allows_platform("codex-acp"))
+
+    def test_disabled_harness_event_is_accepted_without_state_update(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            registry = HarnessRegistry(directory, available={"hermes": True})
+            app = create_app(self.handler, harnesses=registry)
+
+            payload = dict(EVENT_SAMPLES[EventType.TURN_STARTED])
+            payload["platform"] = "codex-acp"
+            status, body = request(app, "POST", "/v1/events/turn.started", payload)
+
+            self.assertEqual(status, 202)
+            self.assertEqual(body["ignored"], "harness_disabled")
+            self.assertEqual(self.handler.events, [])
 
     def test_all_four_inbound_event_interfaces_accept_valid_payloads(self) -> None:
         inbound_types = (

@@ -9,6 +9,8 @@ import shutil
 import subprocess
 import sys
 import threading
+import urllib.error
+import urllib.request
 from collections.abc import Iterable
 from datetime import datetime, timezone
 from pathlib import Path
@@ -354,6 +356,63 @@ class HermesCliConnector:
                     failed_at=datetime.now(timezone.utc),
                 )
             )
+
+
+class OpenClawConnector:
+    """Web-owned outbound boundary for an OpenClaw observation plugin.
+
+    OpenClaw suggestions are intentionally rendered by the Proactive Agent
+    Web Dashboard.  An approved suggestion is sent to the existing Gateway
+    plugin, which runs the action in the original OpenClaw Session.
+    """
+
+    connector_id: ConnectorId = "openclaw"
+
+    def __init__(
+        self,
+        *,
+        gateway_url: str = "http://127.0.0.1:18789",
+        gateway_token: str | None = None,
+        log: Callable[[str], None] = print,
+    ) -> None:
+        self.gateway_url = gateway_url.rstrip("/")
+        self.gateway_token = gateway_token
+        self.log = log
+
+    def show_suggestion(self, event: SuggestionReady) -> None:
+        self.log(
+            f"[openclaw suggestion hidden] {event.suggestion_id} -> "
+            f"Web Dashboard owns display for {event.target_session_id}"
+        )
+
+    def resume_session(self, event: SessionResumeRequested) -> None:
+        payload = json.dumps(
+            {
+                "suggestion_id": event.suggestion_id,
+                "session_id": event.target_session_id,
+                "suggested_action": event.suggested_action,
+            }
+        ).encode("utf-8")
+        request = urllib.request.Request(
+            f"{self.gateway_url}/sn-proactive-agent/resume",
+            data=payload,
+            method="POST",
+            headers={"content-type": "application/json"},
+        )
+        if self.gateway_token:
+            request.add_header("authorization", f"Bearer {self.gateway_token}")
+        try:
+            with urllib.request.urlopen(request, timeout=10) as response:
+                if response.status < 200 or response.status >= 300:
+                    raise ConnectorError(f"OpenClaw Gateway returned HTTP {response.status}")
+            self.log(
+                f"[openclaw resume] {event.suggestion_id} -> "
+                f"{event.target_session_id}"
+            )
+        except (urllib.error.URLError, TimeoutError, OSError) as exc:
+            raise ConnectorError(
+                f"OpenClaw Gateway resume failed for {event.suggestion_id}: {exc}"
+            ) from exc
 
 
 class HermesTuiConnector:

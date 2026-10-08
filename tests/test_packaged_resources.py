@@ -5,6 +5,7 @@ import unittest
 from sn_proactive_agent.packaged_resources import (
     connector_resource,
     materialize_hermes_resources,
+    materialize_openclaw_resources,
     packaged_resource_inventory,
 )
 
@@ -24,6 +25,13 @@ class PackagedResourceTests(unittest.TestCase):
             self.assertIsNone(resources.tui_module)
             self.assertIsNone(resources.tui_plugin)
             self.assertIsNone(resources.tui_patch)
+
+    def test_openclaw_plugin_materializes_as_a_complete_package(self) -> None:
+        with materialize_openclaw_resources() as resources:
+            self.assertEqual(resources.plugin_root, resources.entrypoint.parent)
+            self.assertTrue(resources.manifest.is_file())
+            self.assertTrue(resources.package.is_file())
+            self.assertTrue(resources.entrypoint.is_file())
 
 
 if __name__ == "__main__":
